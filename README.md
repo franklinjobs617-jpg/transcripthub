@@ -1,9 +1,4 @@
 # transcripthub
-transcripthub.net
-This is a comprehensive **README.md** file for your GitHub repository, designed for **transcripthub.net**. It combines the product positioning of a high-performance AI tool with the technical transparency expected on GitHub.
-
-***
-
 # TranscriptHub.net - AI Social Media Transcript Generator
 
 **TranscriptHub.net** is a high-speed, AI-powered vertical generator designed to help content creators, marketers, and scriptwriters extract accurate text from social media videos instantly. 
