@@ -27,6 +27,7 @@ export type TikTokInfoPayload = {
     direct_media_ext?: string;
     direct_media_expires_at?: number;
     direct_media_source?: string;
+    worker_media_url?: string;
   };
   subtitle: {
     available: boolean;
@@ -78,6 +79,7 @@ export type TikTokContentPayload = {
     direct_media_ext?: string;
     direct_media_expires_at?: number;
     direct_media_source?: string;
+    worker_media_url?: string;
   };
   content: {
     segments: Array<{

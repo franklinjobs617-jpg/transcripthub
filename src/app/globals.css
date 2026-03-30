@@ -507,7 +507,7 @@ input:focus-visible {
     color-mix(in srgb, #ffffff 96%, var(--app-accent-soft)) 0%,
     color-mix(in srgb, #ffffff 90%, var(--app-accent-soft)) 100%
   );
-  color: var(--app-text);
+  color: #111827;
   box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--app-accent) 34%, transparent);
   transition: transform 160ms ease, box-shadow 160ms ease,
     border-color 160ms ease, background-color 160ms ease;
@@ -527,6 +527,25 @@ input:focus-visible {
 .ui-inverse-cta-btn:focus-visible {
   outline: 2px solid var(--app-primary);
   outline-offset: 2px;
+}
+
+:root[data-theme="dark"] .ui-inverse-cta-btn {
+  color: #0f172a;
+  border-color: color-mix(in srgb, #1f2937 38%, var(--app-border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #ffffff 97%, #dbeafe) 0%,
+    color-mix(in srgb, #f8fafc 92%, #dbeafe) 100%
+  );
+}
+
+:root[data-theme="dark"] .ui-inverse-cta-btn:hover {
+  border-color: color-mix(in srgb, #1f2937 52%, var(--app-border));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #ffffff 93%, #bfdbfe) 0%,
+    color-mix(in srgb, #f1f5f9 85%, #bfdbfe) 100%
+  );
 }
 
 /* 箭头链接 */

@@ -38,9 +38,16 @@ function resolveStatus(payload: unknown): "paid" | "pending" | "failed" {
   if (normalized === "pending" || normalized === "processing" || normalized === "created") {
     return "pending";
   }
+  if (normalized && (normalized.includes("not found") || normalized.includes("not_found"))) {
+    return "pending";
+  }
 
   const code = obj.code;
-  if (code === 0 || code === 200 || code === "0" || code === "200") return "paid";
+  const msg = typeof obj.msg === "string" ? obj.msg.toLowerCase() : "";
+  if ((code === 200 || code === "200") && (!normalized || normalized === "ok" || msg === "ok")) {
+    return "paid";
+  }
+  if (!normalized && (code === 0 || code === "0")) return "paid";
   return "failed";
 }
 
@@ -158,22 +165,13 @@ export async function POST(request: NextRequest) {
     }
 
     const verifySubscriptionPath =
-      process.env.BILLING_PAYPAL_VERIFY_SUBSCRIPTION_PATH ||
-      "/prod-api/paypal/smart/verify-subscription";
-    const upstream = await fetchWithTimeout(`${billingBase}${verifySubscriptionPath}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        subscriptionId: body.subscriptionId,
-        payerId: body.payerId,
-        googleUserId: authUser?.googleUserId,
-        userId: authUser?.id,
-        email: authUser?.email,
-        project: "transcripthub",
-      }),
+      process.env.BILLING_PAYPAL_VERIFY_SUBSCRIPTION_PATH || "/prod-api/paypal/retUrl";
+    const verifyUrl = `${billingBase}${verifySubscriptionPath}?token=${encodeURIComponent(
+      body.subscriptionId
+    )}${body.payerId ? `&PayerID=${encodeURIComponent(body.payerId)}` : ""}`;
+    const upstream = await fetchWithTimeout(verifyUrl, {
+      method: "GET",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
       timeoutMs: 18000,
     });
 

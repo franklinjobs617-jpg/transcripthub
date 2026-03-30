@@ -79,7 +79,7 @@ export function SiteHeader({
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-app-primary text-white shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-app-primary text-app-primary-foreground shadow-sm">
               <Zap className="h-4 w-4" />
             </div>
             <span className="text-lg font-bold tracking-tight">

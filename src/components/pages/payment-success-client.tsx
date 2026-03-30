@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Clock3, Home, Loader2, RefreshCw, XCircle } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { verifyPayment } from "@/lib/payment-gateway-client";
 import type { PaymentChannel, PaymentVerifyRequest } from "@/lib/payment-types";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -19,12 +19,15 @@ function wait(ms: number) {
 
 export function PaymentSuccessClient() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { refreshUser } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("verifying");
   const [message, setMessage] = useState("Verifying your payment status...");
+  const [attemptCount, setAttemptCount] = useState(0);
+  const successRedirectTimerRef = useRef<number | null>(null);
+  const channelParam = searchParams.get("channel");
 
   const verifyRequest = useMemo<PaymentVerifyRequest | null>(() => {
-    const channelParam = searchParams.get("channel");
     const channel: PaymentChannel =
       channelParam === "paypal" || channelParam === "stripe"
         ? channelParam
@@ -56,15 +59,20 @@ export function PaymentSuccessClient() {
 
     const runVerification = async () => {
       if (!verifyRequest) {
+        if (channelParam === "stripe") {
+          router.replace("/payment/cancel?channel=stripe");
+          return;
+        }
         setStatus("error");
         setMessage("Missing payment identifiers. Please contact support if you were charged.");
         return;
       }
 
-      const maxAttempts = verifyRequest.channel === "stripe" ? 12 : 8;
+      const maxAttempts = verifyRequest.channel === "stripe" ? 30 : 12;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
         if (cancelled) return;
+        setAttemptCount(attempt);
 
         const result = await verifyPayment(verifyRequest);
         if (!result.ok) {
@@ -79,6 +87,32 @@ export function PaymentSuccessClient() {
             return;
           }
           setMessage("Finalizing your payment. Please wait...");
+          await wait(2000);
+          continue;
+        }
+
+        if (verifyRequest.channel === "stripe") {
+          if (result.data.paymentStatus === "paid") {
+            await refreshUser();
+            setStatus("success");
+            setMessage("Payment confirmed and your credits were added. Redirecting...");
+            trackPaymentEvent("pay_verify_success", {
+              channel: verifyRequest.channel,
+              paymentStatus: result.data.paymentStatus,
+            });
+            successRedirectTimerRef.current = window.setTimeout(() => {
+              router.replace("/");
+            }, 2000);
+            return;
+          }
+
+          if (attempt === maxAttempts) {
+            setStatus("pending");
+            setMessage("Payment is still processing. Please check Billing in a moment.");
+            return;
+          }
+
+          setMessage("Waiting for Stripe webhook confirmation...");
           await wait(2000);
           continue;
         }
@@ -118,8 +152,11 @@ export function PaymentSuccessClient() {
     void runVerification();
     return () => {
       cancelled = true;
+      if (successRedirectTimerRef.current !== null) {
+        window.clearTimeout(successRedirectTimerRef.current);
+      }
     };
-  }, [refreshUser, verifyRequest]);
+  }, [channelParam, refreshUser, router, verifyRequest]);
 
   return (
     <main className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center px-4 py-12 sm:px-6">
@@ -129,6 +166,9 @@ export function PaymentSuccessClient() {
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-app-primary" />
             <h1 className="mt-4 text-2xl font-extrabold text-app-text">Verifying payment</h1>
             <p className="mt-2 text-sm text-app-text-muted">{message}</p>
+            <p className="mt-1 text-xs text-app-text-muted">
+              Attempt {attemptCount} / {verifyRequest?.channel === "stripe" ? 30 : 12}
+            </p>
           </div>
         ) : null}
 

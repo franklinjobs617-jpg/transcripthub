@@ -24,7 +24,10 @@ export type BillingOrderItem = {
 
 export type PaymentCreateRequest = {
   channel: PaymentChannel;
-  planCode: PaymentPlanCode;
+  planCode?: PaymentPlanCode;
+  type?: string;
+  project?: string;
+  googleUserId?: string;
   billingCycle?: BillingCycle;
   paypalIntent?: PayPalIntent;
 };

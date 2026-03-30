@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import requests
 import yt_dlp
@@ -27,8 +27,8 @@ ASR_MAX_BYTES = int(os.getenv("INSTAGRAM_ASR_MAX_BYTES", str(24 * 1024 * 1024)))
 ASR_RAW_MAX_BYTES = int(os.getenv("INSTAGRAM_ASR_RAW_MAX_BYTES", str(128 * 1024 * 1024)))
 ASR_FFMPEG_TIMEOUT_SECONDS = int(os.getenv("INSTAGRAM_ASR_FFMPEG_TIMEOUT_SECONDS", "180"))
 ASR_MODEL = os.getenv("HF_ASR_MODEL", "openai/whisper-large-v3")
-ASR_API_URL = os.getenv("HF_ASR_URL", "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3")
-ASR_LEGACY_API_URL = os.getenv("HF_ASR_LEGACY_URL", "https://api-inference.huggingface.co/models/openai/whisper-large-v3")
+ASR_API_URL = os.getenv("HF_ASR_URL", "https://api-inference.huggingface.co/models/openai/whisper-large-v3")
+ASR_LEGACY_API_URL = os.getenv("HF_ASR_LEGACY_URL", "")
 INSTAGRAM_IMPERSONATE_TARGET = os.getenv("INSTAGRAM_IMPERSONATE_TARGET", "chrome")
 INSTAGRAM_APP_INFO = os.getenv(
     "INSTAGRAM_APP_INFO",
@@ -61,6 +61,26 @@ class InstagramTranscriptError(Exception):
         if self.details is not None:
             payload["error"]["details"] = self.details
         return payload
+
+
+def _snapshot_steps(steps: List[dict]) -> List[dict]:
+    return [dict(item) for item in steps]
+
+
+def _error_with_stage(
+    err: InstagramTranscriptError,
+    stage: str,
+    steps: List[dict],
+    extra_details: Optional[dict] = None,
+) -> InstagramTranscriptError:
+    details: dict = {}
+    if isinstance(err.details, dict):
+        details.update(err.details)
+    if isinstance(extra_details, dict):
+        details.update(extra_details)
+    details["stage"] = stage
+    details["steps"] = _snapshot_steps(steps)
+    return InstagramTranscriptError(err.code, err.message, err.status_code, details)
 
 
 def normalize_instagram_url(raw_url: str) -> str:
@@ -1201,8 +1221,8 @@ def _transcribe_media_with_huggingface(
     filename: str,
     media_ext: str,
     requested_lang: str,
-) -> Tuple[List[dict], str]:
-    hf_token = os.getenv("HF_API_TOKEN", "").strip()
+) -> Tuple[List[dict], str, dict]:
+    hf_token = os.getenv("HF_API_TOKEN", "")
     if not hf_token:
         raise InstagramTranscriptError(
             "ASR_NOT_CONFIGURED",
@@ -1216,18 +1236,45 @@ def _transcribe_media_with_huggingface(
         "Content-Type": content_type,
     }
 
+    def _router_endpoint_from(endpoint: str) -> str:
+        value = (endpoint or "").strip()
+        if not value:
+            return ""
+        marker = "/models/"
+        if "api-inference.huggingface.co" not in value or marker not in value:
+            return ""
+        model_part = value.split(marker, 1)[1].strip().strip("/")
+        if not model_part:
+            return ""
+        return f"https://router.huggingface.co/hf-inference/models/{model_part}"
+
     endpoints: List[str] = []
-    if ASR_API_URL:
-        endpoints.append(ASR_API_URL)
-    if ASR_LEGACY_API_URL and ASR_LEGACY_API_URL not in endpoints:
-        endpoints.append(ASR_LEGACY_API_URL)
+    for configured in (ASR_API_URL, ASR_LEGACY_API_URL):
+        value = (configured or "").strip()
+        if not value:
+            continue
+        router_value = _router_endpoint_from(value)
+        if router_value and router_value not in endpoints:
+            endpoints.append(router_value)
+        if value not in endpoints:
+            endpoints.append(value)
+
+    if not endpoints:
+        fallback_router = f"https://router.huggingface.co/hf-inference/models/{ASR_MODEL}"
+        endpoints.append(fallback_router)
 
     session = requests.Session()
     session.trust_env = False
     try:
-        last_details: Optional[dict] = None
+        attempts: List[dict] = []
 
         for endpoint in endpoints:
+            attempt_log = {
+                "endpoint": endpoint,
+                "model": ASR_MODEL,
+                "requested_lang": requested_lang,
+                "filename": filename,
+            }
             try:
                 response = session.post(
                     endpoint,
@@ -1236,36 +1283,25 @@ def _transcribe_media_with_huggingface(
                     timeout=ASR_TIMEOUT_SECONDS,
                 )
             except Exception as exc:
-                last_details = {
-                    "provider": "huggingface",
-                    "endpoint": endpoint,
-                    "error": str(exc)[:500],
-                }
+                attempt_log["status"] = "request_exception"
+                attempt_log["error"] = str(exc)[:500]
+                attempts.append(attempt_log)
                 continue
 
+            attempt_log["status_code"] = response.status_code
             if response.status_code >= 400:
-                last_details = {
-                    "provider": "huggingface",
-                    "endpoint": endpoint,
-                    "status_code": response.status_code,
-                    "error": (response.text or "")[:500],
-                }
+                attempt_log["status"] = "http_error"
+                attempt_log["error"] = (response.text or "")[:500]
+                attempts.append(attempt_log)
                 continue
 
             try:
                 payload = response.json()
             except ValueError:
-                raise InstagramTranscriptError(
-                    "ASR_FAILED",
-                    "HuggingFace ASR returned invalid JSON.",
-                    502,
-                    {
-                        "provider": "huggingface",
-                        "endpoint": endpoint,
-                        "status_code": response.status_code,
-                        "response_preview": (response.text or "")[:500],
-                    },
-                )
+                attempt_log["status"] = "invalid_json"
+                attempt_log["response_preview"] = (response.text or "")[:500]
+                attempts.append(attempt_log)
+                continue
 
             text = str(
                 payload.get("text")
@@ -1302,25 +1338,22 @@ def _transcribe_media_with_huggingface(
                 text = "\n".join(seg["text"] for seg in segments if seg.get("text"))
 
             if not text:
-                raise InstagramTranscriptError(
-                    "ASR_FAILED",
-                    "HuggingFace ASR returned empty transcript.",
-                    502,
-                    {
-                        "provider": "huggingface",
-                        "endpoint": endpoint,
-                        "status_code": response.status_code,
-                        "requested_lang": requested_lang,
-                    },
-                )
+                attempt_log["status"] = "empty_transcript"
+                attempt_log["response_keys"] = list(payload.keys())[:20] if isinstance(payload, dict) else []
+                attempts.append(attempt_log)
+                continue
 
-            return segments, text
+            attempt_log["status"] = "success"
+            attempt_log["text_chars"] = len(text)
+            attempt_log["segments_count"] = len(segments)
+            attempts.append(attempt_log)
+            return segments, text, {"selected_endpoint": endpoint, "attempts": attempts}
 
         raise InstagramTranscriptError(
             "ASR_FAILED",
             "HuggingFace ASR request failed.",
             502,
-            last_details or {"provider": "huggingface"},
+            {"provider": "huggingface", "attempts": attempts},
         )
     finally:
         session.close()
@@ -1364,11 +1397,87 @@ def _build_media_probe(info: dict) -> dict:
     }
 
 
+def _choose_playback_candidate(info: dict) -> Optional[dict]:
+    formats = info.get("formats") or []
+    if not isinstance(formats, list):
+        return None
+
+    playback_formats = []
+    for item in formats:
+        if not isinstance(item, dict) or not item.get("url"):
+            continue
+        acodec = str(item.get("acodec", "none"))
+        vcodec = str(item.get("vcodec", "none"))
+        if acodec == "none" or vcodec == "none":
+            continue
+        playback_formats.append(item)
+
+    if not playback_formats:
+        return None
+
+    def sort_key(item: dict):
+        height = _safe_number(item.get("height"), 0.0)
+        bitrate = _safe_number(item.get("tbr"), 0.0)
+        filesize = _safe_number(item.get("filesize") or item.get("filesize_approx"), 0.0)
+        return (-height, -bitrate, -filesize)
+
+    playback_formats.sort(key=sort_key)
+    return playback_formats[0]
+
+
+def _parse_expire_timestamp(media_url: str) -> Optional[int]:
+    if not media_url:
+        return None
+    try:
+        query = parse_qs(urlparse(media_url).query)
+        for key in ("expire", "expires"):
+            raw = (query.get(key) or [None])[0]
+            if raw is not None:
+                return int(raw)
+    except Exception:
+        return None
+    return None
+
+
+def _build_video_metadata(info: dict) -> dict:
+    video_id = str(info.get("id") or "").strip()
+    webpage_url = str(info.get("webpage_url") or info.get("original_url") or "").strip()
+
+    direct_media_url = str(info.get("url") or "").strip()
+    direct_media_format_id = str(info.get("format_id") or "").strip()
+    direct_media_ext = str(info.get("ext") or "").strip()
+    direct_media_source = "requested"
+
+    if not direct_media_url:
+        playback_fmt = _choose_playback_candidate(info)
+        if isinstance(playback_fmt, dict):
+            direct_media_url = str(playback_fmt.get("url") or "").strip()
+            direct_media_format_id = str(playback_fmt.get("format_id") or "").strip()
+            direct_media_ext = str(playback_fmt.get("ext") or "").strip()
+            direct_media_source = "playback_format"
+
+    return {
+        "id": video_id or None,
+        "title": info.get("title"),
+        "thumbnail": info.get("thumbnail"),
+        "duration": info.get("duration"),
+        "uploader": info.get("uploader"),
+        "webpage_url": webpage_url or None,
+        "embed_url": None,
+        "direct_media_url": direct_media_url or None,
+        "direct_media_format_id": direct_media_format_id or None,
+        "direct_media_ext": direct_media_ext or None,
+        "direct_media_expires_at": _parse_expire_timestamp(direct_media_url) if direct_media_url else None,
+        "direct_media_source": direct_media_source if direct_media_url else None,
+    }
+
+
 def get_instagram_info_payload(url: str, preferred_lang: Optional[str] = None) -> dict:
     normalized_url = normalize_instagram_url(url)
     info = _extract_info(normalized_url)
     languages = _collect_languages(info)
     available_codes = [item["code"] for item in languages]
+    video_meta = _build_video_metadata(info)
 
     default_lang = ""
     fallback_order: List[str] = []
@@ -1380,13 +1489,7 @@ def get_instagram_info_payload(url: str, preferred_lang: Optional[str] = None) -
     return {
         "ok": True,
         "platform": "instagram",
-        "video": {
-            "id": info.get("id"),
-            "title": info.get("title"),
-            "thumbnail": info.get("thumbnail"),
-            "duration": info.get("duration"),
-            "uploader": info.get("uploader"),
-        },
+        "video": video_meta,
         "subtitle": {
             "available": len(languages) > 0,
             "languages": languages,
@@ -1415,6 +1518,7 @@ def _build_raw_bundle(info: dict, requested_lang: Optional[str]) -> Optional[dic
     return {
         "title": info.get("title") or "instagram_transcript",
         "thumbnail": info.get("thumbnail"),
+        "video_meta": _build_video_metadata(info),
         "lang_used": lang_used,
         "fallback_order": fallback_order,
         "segments": segments,
@@ -1426,24 +1530,93 @@ def _build_raw_bundle(info: dict, requested_lang: Optional[str]) -> Optional[dic
 
 
 def _build_asr_bundle(info: dict, requested_lang: Optional[str]) -> dict:
+    debug_steps: List[dict] = []
     candidate = _choose_audio_candidate(info)
     if not candidate:
         raise InstagramTranscriptError(
             "ASR_MEDIA_UNAVAILABLE",
             "No media format with audio is available for ASR fallback.",
             404,
+            {
+                "stage": "choose_media_candidate",
+                "steps": _snapshot_steps(debug_steps),
+            },
         )
 
-    media_bytes, media_ext = _download_media_with_fallback(info, candidate)
-    media_bytes, media_ext = _normalize_media_for_asr(media_bytes, media_ext)
+    format_info = candidate.get("format") or {}
+    debug_steps.append(
+        {
+            "stage": "choose_media_candidate",
+            "status": "success",
+            "kind": candidate.get("kind"),
+            "ext": format_info.get("ext"),
+            "format_id": format_info.get("format_id"),
+            "filesize": format_info.get("filesize") or format_info.get("filesize_approx"),
+        }
+    )
+
+    try:
+        media_bytes, media_ext = _download_media_with_fallback(info, candidate)
+        debug_steps.append(
+            {
+                "stage": "download_media",
+                "status": "success",
+                "media_ext": media_ext,
+                "media_bytes": len(media_bytes),
+            }
+        )
+    except InstagramTranscriptError as err:
+        debug_steps.append(
+            {
+                "stage": "download_media",
+                "status": "failed",
+                "error_code": err.code,
+                "error_message": err.message,
+            }
+        )
+        raise _error_with_stage(err, "download_media", debug_steps)
+
+    try:
+        source_ext = media_ext
+        media_bytes, media_ext = _normalize_media_for_asr(media_bytes, media_ext)
+        debug_steps.append(
+            {
+                "stage": "normalize_media",
+                "status": "success",
+                "input_ext": source_ext,
+                "output_ext": media_ext,
+                "output_bytes": len(media_bytes),
+            }
+        )
+    except InstagramTranscriptError as err:
+        debug_steps.append(
+            {
+                "stage": "normalize_media",
+                "status": "failed",
+                "error_code": err.code,
+                "error_message": err.message,
+            }
+        )
+        raise _error_with_stage(err, "normalize_media", debug_steps)
+
     file_name = f"{_sanitize_filename(str(info.get('id') or 'instagram'))}.{media_ext}"
     asr_provider = "huggingface"
     requested = (requested_lang or "en").strip() or "en"
 
     transcript_available = True
     asr_error: Optional[dict] = None
+    asr_trace: Optional[dict] = None
     try:
-        segments, full_text = _transcribe_media_with_huggingface(media_bytes, file_name, media_ext, requested)
+        segments, full_text, asr_trace = _transcribe_media_with_huggingface(media_bytes, file_name, media_ext, requested)
+        debug_steps.append(
+            {
+                "stage": "transcribe_huggingface",
+                "status": "success",
+                "endpoint": (asr_trace or {}).get("selected_endpoint"),
+                "text_chars": len(full_text),
+                "segments_count": len(segments),
+            }
+        )
     except Exception as exc:
         transcript_available = False
         segments = [{"start": 0.0, "end": 0.0, "text": "Audio extracted successfully. Transcription failed."}]
@@ -1453,12 +1626,29 @@ def _build_asr_bundle(info: dict, requested_lang: Optional[str]) -> dict:
             asr_error = {"code": exc.code, "message": exc.message}
             if getattr(exc, "details", None) is not None:
                 asr_error["details"] = exc.details
+            debug_steps.append(
+                {
+                    "stage": "transcribe_huggingface",
+                    "status": "failed",
+                    "error_code": exc.code,
+                    "error_message": exc.message,
+                }
+            )
         else:
             asr_error = {"code": "ASR_FAILED", "message": "Transcription failed after audio extraction."}
+            debug_steps.append(
+                {
+                    "stage": "transcribe_huggingface",
+                    "status": "failed",
+                    "error_code": "ASR_FAILED",
+                    "error_message": "Transcription failed after audio extraction.",
+                }
+            )
 
     return {
         "title": info.get("title") or "instagram_transcript",
         "thumbnail": info.get("thumbnail"),
+        "video_meta": _build_video_metadata(info),
         "lang_used": requested,
         "fallback_order": [requested],
         "segments": segments,
@@ -1469,6 +1659,8 @@ def _build_asr_bundle(info: dict, requested_lang: Optional[str]) -> dict:
         "asr_provider": asr_provider,
         "transcript_available": transcript_available,
         "asr_error": asr_error,
+        "asr_trace": asr_trace,
+        "debug_steps": _snapshot_steps(debug_steps),
     }
 
 
@@ -1525,7 +1717,10 @@ def get_instagram_content_payload(url: str, lang: Optional[str] = None) -> dict:
         "asr_provider": bundle.get("asr_provider"),
         "transcript_available": bundle.get("transcript_available", True),
         "asr_error": bundle.get("asr_error"),
-        "video": {
+        "asr_trace": bundle.get("asr_trace"),
+        "debug_steps": bundle.get("debug_steps", []),
+        "video": bundle.get("video_meta")
+        or {
             "title": bundle["title"],
             "thumbnail": bundle["thumbnail"],
         },

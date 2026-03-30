@@ -1,5 +1,7 @@
 # Transcripthub Payment SOP (Execution-Ready)
 
+如果你是“新项目从零写后端”，请优先看：`PAYMENT_BACKEND_SOP_从0到1_小白版.md`
+
 This SOP is written for the current project:
 - Repo: `E:\前端 github\transcripthub`
 - App: `E:\前端 github\transcripthub\web`

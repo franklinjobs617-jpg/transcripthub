@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 import time
 from typing import Dict, List, Optional, Tuple
-from urllib.parse import parse_qs, urlparse, urlunparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import requests
 import yt_dlp
@@ -39,6 +39,18 @@ TIKTOK_DEVICE_ID = os.getenv("TIKTOK_DEVICE_ID", "").strip()
 TIKTOK_API_HOSTNAME = os.getenv("TIKTOK_API_HOSTNAME", "").strip()
 TIKTOK_ENABLE_YTDLP_CLI_FALLBACK = os.getenv("TIKTOK_ENABLE_YTDLP_CLI_FALLBACK", "1") == "1"
 TIKTOK_YTDLP_CLI_TIMEOUT_SECONDS = int(os.getenv("TIKTOK_YTDLP_CLI_TIMEOUT_SECONDS", "120"))
+TIKTOK_ENABLE_MOBILE_API_FALLBACK = os.getenv("TIKTOK_ENABLE_MOBILE_API_FALLBACK", "1") == "1"
+TIKTOK_MOBILE_API_URL = os.getenv("TIKTOK_MOBILE_API_URL", "https://api-h2.tiktokv.com/aweme/v1/feed/")
+TIKTOK_MOBILE_API_VERSION_NAME = os.getenv("TIKTOK_MOBILE_API_VERSION_NAME", "26.1.3")
+TIKTOK_MOBILE_API_VERSION_CODE = os.getenv("TIKTOK_MOBILE_API_VERSION_CODE", "2613")
+TIKTOK_MOBILE_API_AID = os.getenv("TIKTOK_MOBILE_API_AID", "1180")
+TIKTOK_MOBILE_API_REGION = os.getenv("TIKTOK_MOBILE_API_REGION", "US")
+TIKTOK_MOBILE_API_CHANNEL = os.getenv("TIKTOK_MOBILE_API_CHANNEL", "googleplay")
+TIKTOK_MEDIA_WORKER_BASE_URL = os.getenv(
+    "TIKTOK_MEDIA_WORKER_BASE_URL",
+    "https://twilight-sunset-0e4d.franke-4b7.workers.dev",
+).strip()
+TIKTOK_MEDIA_WORKER_MEDIA_PATH = os.getenv("TIKTOK_MEDIA_WORKER_MEDIA_PATH", "/media").strip() or "/media"
 
 _tiktok_info_cache: Dict[str, Tuple[float, dict]] = {}
 _tiktok_subtitle_cache: Dict[str, Tuple[float, dict]] = {}
@@ -72,6 +84,10 @@ def _rand_numeric_id(length: int = 19) -> str:
     first = str(random.randint(1, 9))
     tail = "".join(random.choices(string.digits, k=max(0, length - 1)))
     return first + tail
+
+
+def _rand_hex(length: int = 16) -> str:
+    return "".join(random.choices("0123456789abcdef", k=max(1, length)))
 
 
 def _normalize_tiktok_app_info(raw: str, fallback_iid: Optional[str]) -> str:
@@ -151,6 +167,469 @@ def normalize_tiktok_url(raw_url: str) -> str:
         )
     )
     return normalized
+
+
+def _extract_tiktok_video_id_from_url(normalized_url: str) -> str:
+    match = re.search(r"/video/(\d+)", normalized_url or "")
+    if match:
+        return match.group(1)
+    parsed = urlparse(normalized_url or "")
+    qs = parse_qs(parsed.query)
+    for key in ("aweme_id", "item_id", "video_id"):
+        value = (qs.get(key) or [None])[0]
+        if isinstance(value, str) and value.isdigit():
+            return value
+    raise TikTokTranscriptError(
+        "VIDEO_UNAVAILABLE",
+        "Failed to determine TikTok video id.",
+        502,
+        {"normalized_url": normalized_url},
+    )
+
+
+def _mobile_api_headers() -> dict:
+    version_name = TIKTOK_MOBILE_API_VERSION_NAME
+    version_code = TIKTOK_MOBILE_API_VERSION_CODE
+    return {
+        "user-agent": (
+            f"com.ss.android.ugc.trill/{version_code} "
+            "(Linux; U; Android 10; en_US; Pixel 4; "
+            f"Build/QQ3A.200805.001; Cronet/58.0.2991.0)"
+        ),
+        "accept": "application/json",
+        "x-ss-req-ticket": str(int(time.time() * 1000)),
+        "referer": "https://www.tiktok.com/",
+        "x-tiktok-version": version_name,
+    }
+
+
+def _mobile_api_params(video_id: str) -> dict:
+    ts = int(time.time())
+    region = TIKTOK_MOBILE_API_REGION
+    version_name = TIKTOK_MOBILE_API_VERSION_NAME
+    version_code = TIKTOK_MOBILE_API_VERSION_CODE
+    return {
+        "aweme_id": video_id,
+        "version_name": version_name,
+        "version_code": version_code,
+        "build_number": version_name,
+        "manifest_version_code": version_code,
+        "update_version_code": version_code,
+        "openudid": _rand_hex(16),
+        "uuid": _rand_numeric_id(16),
+        "_rticket": str(ts * 1000),
+        "ts": str(ts),
+        "device_brand": "Google",
+        "device_type": "Pixel 4",
+        "device_platform": "android",
+        "resolution": "1080*1920",
+        "dpi": "420",
+        "os_version": "10",
+        "os_api": "29",
+        "carrier_region": region,
+        "sys_region": region,
+        "region": region,
+        "app_name": "trill",
+        "app_language": "en",
+        "language": "en",
+        "timezone_name": "America/New_York",
+        "timezone_offset": "-14400",
+        "channel": TIKTOK_MOBILE_API_CHANNEL,
+        "ac": "wifi",
+        "mcc_mnc": "310260",
+        "is_my_cn": "0",
+        "aid": TIKTOK_MOBILE_API_AID,
+        "ssmix": "a",
+        "as": "a1qwert123",
+        "cp": "cbfhckdckkde1",
+    }
+
+
+def _extract_first_url(raw_value) -> str:
+    if isinstance(raw_value, str):
+        return raw_value.strip()
+    if isinstance(raw_value, dict):
+        url_list = raw_value.get("url_list")
+        if isinstance(url_list, list):
+            for item in url_list:
+                if isinstance(item, str) and item.strip():
+                    return item.strip()
+        url_value = raw_value.get("url")
+        if isinstance(url_value, str) and url_value.strip():
+            return url_value.strip()
+    return ""
+
+
+def _aweme_duration_to_seconds(raw_value) -> Optional[float]:
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return None
+    if value > 1000:
+        return round(value / 1000.0, 3)
+    if value >= 0:
+        return round(value, 3)
+    return None
+
+
+def _thumbnail_from_aweme(video_payload: dict) -> Optional[str]:
+    for key in ("origin_cover", "cover", "dynamic_cover", "animated_cover"):
+        candidate = _extract_first_url(video_payload.get(key))
+        if candidate:
+            return candidate
+    return None
+
+
+def _build_mobile_api_formats(aweme: dict, normalized_url: str) -> List[dict]:
+    video_payload = aweme.get("video") or {}
+    width = video_payload.get("width")
+    height = video_payload.get("height")
+    duration = _aweme_duration_to_seconds(aweme.get("duration")) or _aweme_duration_to_seconds(video_payload.get("duration"))
+    referer = normalized_url or "https://www.tiktok.com/"
+
+    candidates: List[dict] = []
+    seen_urls = set()
+
+    for field_name, format_note in (
+        ("download_addr", "mobile_download_addr"),
+        ("play_addr", "mobile_play_addr"),
+    ):
+        field = video_payload.get(field_name)
+        url_list = field.get("url_list") if isinstance(field, dict) else None
+        if not isinstance(url_list, list):
+            single_url = _extract_first_url(field)
+            url_list = [single_url] if single_url else []
+
+        for idx, item in enumerate(url_list):
+            if not isinstance(item, str) or not item.strip():
+                continue
+            media_url = item.strip()
+            if media_url in seen_urls:
+                continue
+            seen_urls.add(media_url)
+            candidates.append(
+                {
+                    "url": media_url,
+                    "ext": "mp4",
+                    "format_id": f"{field_name}_{idx}",
+                    "format_note": format_note,
+                    "acodec": "aac",
+                    "vcodec": "h264",
+                    "protocol": "https",
+                    "width": width,
+                    "height": height,
+                    "duration": duration,
+                    "http_headers": {
+                        "User-Agent": (
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/122.0.0.0 Safari/537.36"
+                        ),
+                        "Referer": referer,
+                    },
+                }
+            )
+
+    bitrate_list = video_payload.get("bit_rate") or []
+    if isinstance(bitrate_list, list):
+        for idx, item in enumerate(bitrate_list):
+            if not isinstance(item, dict):
+                continue
+            play_addr = item.get("play_addr")
+            media_url = _extract_first_url(play_addr)
+            if not media_url or media_url in seen_urls:
+                continue
+            seen_urls.add(media_url)
+            candidates.append(
+                {
+                    "url": media_url,
+                    "ext": "mp4",
+                    "format_id": f"bitrate_{idx}",
+                    "format_note": "mobile_bitrate_addr",
+                    "acodec": "aac",
+                    "vcodec": "h264",
+                    "protocol": "https",
+                    "width": item.get("play_addr_width") or width,
+                    "height": item.get("play_addr_height") or height,
+                    "tbr": item.get("bit_rate"),
+                    "duration": duration,
+                    "http_headers": {
+                        "User-Agent": (
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/122.0.0.0 Safari/537.36"
+                        ),
+                        "Referer": referer,
+                    },
+                }
+            )
+
+    return candidates
+
+
+def _build_info_from_mobile_aweme(aweme: dict, normalized_url: str) -> dict:
+    video_payload = aweme.get("video") or {}
+    author_payload = aweme.get("author") or {}
+    formats = _build_mobile_api_formats(aweme, normalized_url)
+    direct_url = _extract_first_url(video_payload.get("play_addr")) or _extract_first_url(video_payload.get("download_addr"))
+    duration = _aweme_duration_to_seconds(aweme.get("duration")) or _aweme_duration_to_seconds(video_payload.get("duration"))
+    thumbnail = _thumbnail_from_aweme(video_payload)
+    uploader = author_payload.get("unique_id") or author_payload.get("nickname")
+
+    info = {
+        "id": str(aweme.get("aweme_id") or aweme.get("id") or _extract_tiktok_video_id_from_url(normalized_url)),
+        "title": aweme.get("desc") or f"TikTok video #{aweme.get('aweme_id') or ''}".strip(),
+        "thumbnail": thumbnail,
+        "duration": duration,
+        "uploader": uploader,
+        "webpage_url": normalized_url,
+        "original_url": normalized_url,
+        "url": direct_url,
+        "format_id": "mobile_play_addr" if direct_url else None,
+        "ext": "mp4" if direct_url else None,
+        "formats": formats,
+        "subtitles": {},
+        "automatic_captions": {},
+        "download_addr": video_payload.get("download_addr"),
+        "play_addr": video_payload.get("play_addr"),
+        "__mobile_aweme": aweme,
+        "__mobile_api_source": "feed_api",
+    }
+    return info
+
+
+def _merge_mobile_aweme_into_info(info: dict, aweme: dict, normalized_url: str) -> dict:
+    merged = dict(info)
+    video_payload = aweme.get("video") or {}
+    mobile_info = _build_info_from_mobile_aweme(aweme, normalized_url)
+
+    for key in ("download_addr", "play_addr", "__mobile_aweme", "__mobile_api_source"):
+        if mobile_info.get(key) is not None:
+            merged[key] = mobile_info.get(key)
+
+    if not merged.get("thumbnail") and mobile_info.get("thumbnail"):
+        merged["thumbnail"] = mobile_info.get("thumbnail")
+    if not merged.get("title") and mobile_info.get("title"):
+        merged["title"] = mobile_info.get("title")
+    if not merged.get("duration") and mobile_info.get("duration") is not None:
+        merged["duration"] = mobile_info.get("duration")
+    if not merged.get("uploader") and mobile_info.get("uploader"):
+        merged["uploader"] = mobile_info.get("uploader")
+
+    if not merged.get("url") and mobile_info.get("url"):
+        merged["url"] = mobile_info.get("url")
+        merged["format_id"] = mobile_info.get("format_id")
+        merged["ext"] = mobile_info.get("ext")
+
+    merged_formats = merged.get("formats") or []
+    if not isinstance(merged_formats, list):
+        merged_formats = []
+    seen_urls = {
+        str(item.get("url") or "").strip()
+        for item in merged_formats
+        if isinstance(item, dict) and str(item.get("url") or "").strip()
+    }
+    for fmt in mobile_info.get("formats") or []:
+        if not isinstance(fmt, dict):
+            continue
+        media_url = str(fmt.get("url") or "").strip()
+        if not media_url or media_url in seen_urls:
+            continue
+        seen_urls.add(media_url)
+        merged_formats.append(fmt)
+    merged["formats"] = merged_formats
+
+    if not merged.get("download_addr") and video_payload.get("download_addr") is not None:
+        merged["download_addr"] = video_payload.get("download_addr")
+    if not merged.get("play_addr") and video_payload.get("play_addr") is not None:
+        merged["play_addr"] = video_payload.get("play_addr")
+
+    return merged
+
+
+def _extract_mobile_aweme_once(normalized_url: str, proxy_url: Optional[str] = None) -> dict:
+    video_id = _extract_tiktok_video_id_from_url(normalized_url)
+    session = requests.Session()
+    session.trust_env = False
+    proxies = {}
+    if proxy_url:
+        proxies = {"http": proxy_url, "https": proxy_url}
+    try:
+        response = session.get(
+            TIKTOK_MOBILE_API_URL,
+            params=_mobile_api_params(video_id),
+            headers=_mobile_api_headers(),
+            timeout=20,
+            proxies=proxies,
+        )
+    except Exception as exc:
+        raise TikTokTranscriptError(
+            "VIDEO_UNAVAILABLE",
+            "TikTok mobile API request failed.",
+            502,
+            {"transport": "mobile_api", "error": str(exc)[:300], "proxy": bool(proxy_url)},
+        ) from exc
+    finally:
+        session.close()
+
+    if response.status_code >= 400:
+        raise TikTokTranscriptError(
+            "VIDEO_UNAVAILABLE",
+            "TikTok mobile API returned an error.",
+            502,
+            {
+                "transport": "mobile_api",
+                "status_code": response.status_code,
+                "response_preview": (response.text or "")[:500],
+                "proxy": bool(proxy_url),
+            },
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise TikTokTranscriptError(
+            "VIDEO_UNAVAILABLE",
+            "TikTok mobile API returned invalid JSON.",
+            502,
+            {"transport": "mobile_api", "response_preview": (response.text or "")[:500], "proxy": bool(proxy_url)},
+        ) from exc
+
+    aweme_list = payload.get("aweme_list") or []
+    if not isinstance(aweme_list, list) or not aweme_list:
+        raise TikTokTranscriptError(
+            "VIDEO_UNAVAILABLE",
+            "TikTok mobile API returned no aweme data.",
+            502,
+            {
+                "transport": "mobile_api",
+                "payload_keys": list(payload.keys())[:20] if isinstance(payload, dict) else [],
+                "proxy": bool(proxy_url),
+            },
+        )
+
+    aweme = aweme_list[0]
+    if not isinstance(aweme, dict):
+        raise TikTokTranscriptError(
+            "VIDEO_UNAVAILABLE",
+            "TikTok mobile API returned malformed aweme data.",
+            502,
+            {"transport": "mobile_api", "proxy": bool(proxy_url)},
+        )
+    return aweme
+
+
+def _extract_mobile_info(normalized_url: str, proxy_url: Optional[str]) -> dict:
+    last_error: Optional[TikTokTranscriptError] = None
+    for current_proxy in (None, proxy_url):
+        if current_proxy is None and proxy_url is None and last_error is not None:
+            continue
+        try:
+            aweme = _extract_mobile_aweme_once(normalized_url, current_proxy)
+            return _build_info_from_mobile_aweme(aweme, normalized_url)
+        except TikTokTranscriptError as err:
+            last_error = err
+            continue
+    if last_error is not None:
+        raise last_error
+    raise TikTokTranscriptError(
+        "VIDEO_UNAVAILABLE",
+        "TikTok mobile API fallback failed.",
+        502,
+        {"transport": "mobile_api"},
+    )
+
+
+def _needs_mobile_api_enrichment(info: dict) -> bool:
+    if not isinstance(info, dict):
+        return True
+    mobile_candidate = _pick_mobile_direct_url(info)[0]
+    if mobile_candidate and _is_preferred_tiktok_video_url(mobile_candidate):
+        return False
+    nested_candidate = _pick_any_tiktokcdn_url(info)[0]
+    if nested_candidate and _is_preferred_tiktok_video_url(nested_candidate):
+        return False
+    if _choose_tiktokcdn_playback_candidate(info) is not None:
+        return False
+    direct_url = str(info.get("url") or "").strip()
+    if direct_url and _is_preferred_tiktok_video_url(direct_url):
+        return False
+    return True
+
+
+def _enrich_info_with_mobile_api(info: dict, normalized_url: str, proxy_url: Optional[str]) -> dict:
+    if not TIKTOK_ENABLE_MOBILE_API_FALLBACK:
+        enriched = dict(info)
+        enriched["__mobile_enrich_debug"] = {
+            "enabled": False,
+            "result": "skipped",
+            "reason": "TIKTOK_ENABLE_MOBILE_API_FALLBACK=0",
+            "attempts": [],
+        }
+        return enriched
+
+    attempts: List[dict] = []
+    first_error: Optional[TikTokTranscriptError] = None
+
+    try:
+        aweme = _extract_mobile_aweme_once(normalized_url, None)
+        attempts.append({"mode": "direct", "status": "success"})
+        merged = _merge_mobile_aweme_into_info(info, aweme, normalized_url)
+        merged["__mobile_enrich_debug"] = {
+            "enabled": True,
+            "result": "success",
+            "selected_mode": "direct",
+            "attempts": attempts,
+        }
+        return merged
+    except TikTokTranscriptError as err:
+        first_error = err
+        attempts.append(
+            {
+                "mode": "direct",
+                "status": "failed",
+                "code": err.code,
+                "message": err.message,
+                "details": err.details,
+            }
+        )
+
+    if proxy_url:
+        try:
+            aweme = _extract_mobile_aweme_once(normalized_url, proxy_url)
+            attempts.append({"mode": "proxy", "status": "success"})
+            merged = _merge_mobile_aweme_into_info(info, aweme, normalized_url)
+            merged["__mobile_enrich_debug"] = {
+                "enabled": True,
+                "result": "success",
+                "selected_mode": "proxy",
+                "attempts": attempts,
+            }
+            return merged
+        except TikTokTranscriptError as err:
+            attempts.append(
+                {
+                    "mode": "proxy",
+                    "status": "failed",
+                    "code": err.code,
+                    "message": err.message,
+                    "details": err.details,
+                }
+            )
+
+    enriched = dict(info)
+    enriched["__mobile_enrich_debug"] = {
+        "enabled": True,
+        "result": "failed",
+        "attempts": attempts,
+    }
+    if first_error is not None:
+        enriched["__mobile_enrich_error"] = {
+            "code": first_error.code,
+            "message": first_error.message,
+            "details": first_error.details,
+        }
+    return enriched
 
 
 def _map_extraction_error(exc: Exception) -> TikTokTranscriptError:
@@ -436,6 +915,12 @@ def _extract_info(normalized_url: str, force_refresh: bool = False) -> dict:
         except TikTokTranscriptError as cli_err:
             last_error = cli_err
 
+    if info is None and TIKTOK_ENABLE_MOBILE_API_FALLBACK:
+        try:
+            info = _extract_mobile_info(normalized_url, proxy_url)
+        except TikTokTranscriptError as mobile_err:
+            last_error = mobile_err
+
     if info is None:
         if last_error is not None:
             raise last_error
@@ -451,6 +936,9 @@ def _extract_info(normalized_url: str, force_refresh: bool = False) -> dict:
             "Failed to read TikTok video metadata.",
             502,
         )
+
+    if _needs_mobile_api_enrichment(info):
+        info = _enrich_info_with_mobile_api(info, normalized_url, proxy_url)
 
     _cache_set(_tiktok_info_cache, cache_key, info)
     return info
@@ -1568,6 +2056,64 @@ def _iter_leaf_nodes(node, path: str = ""):
         yield path, node
 
 
+def _is_probable_video_media_url(media_url: str, leaf_path: str = "") -> bool:
+    value = str(media_url or "").strip()
+    if not value.startswith("http"):
+        return False
+
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").lower()
+    query = (parsed.query or "").lower()
+    leaf = (leaf_path or "").lower()
+
+    if "tiktokcdn" not in host and "tiktok.com" not in host:
+        return False
+
+    image_tokens = (
+        ".image",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".gif",
+        "origin.image",
+        "dynamiccover",
+        "cover",
+        "thumbnail",
+        "avatar",
+        "animated_cover",
+    )
+    if any(token in path for token in image_tokens):
+        return False
+    if any(token in leaf for token in ("thumbnail", "cover", "avatar", "image", "poster")):
+        return False
+
+    video_signals = (
+        "/video/",
+        "mime_type=video_mp4",
+        ".mp4",
+        "play_addr",
+        "download_addr",
+        "play_url",
+        "download_url",
+        "bit_rate",
+    )
+    return any(token in value.lower() for token in video_signals) or any(token in leaf for token in video_signals)
+
+
+def _is_preferred_tiktok_video_url(media_url: str) -> bool:
+    value = str(media_url or "").strip()
+    if not value or not _is_probable_video_media_url(value):
+        return False
+    host = (urlparse(value).hostname or "").lower()
+    if "tiktokcdn" in host:
+        return True
+    if "webapp-prime" in host:
+        return False
+    return "tiktok.com" in host
+
+
 def _pick_mobile_direct_url(info: dict) -> Tuple[str, str, str]:
     # 1) Direct top-level fields
     for field_name, source_name in (
@@ -1577,7 +2123,7 @@ def _pick_mobile_direct_url(info: dict) -> Tuple[str, str, str]:
         ("play_url", "mobile_play_url"),
     ):
         candidate_url = _extract_addr_url(info.get(field_name))
-        if candidate_url:
+        if candidate_url and _is_probable_video_media_url(candidate_url, field_name):
             return candidate_url, field_name, source_name
 
     # 2) Deep scan fields in nested aweme payload, prefer tiktokcdn host
@@ -1588,6 +2134,8 @@ def _pick_mobile_direct_url(info: dict) -> Tuple[str, str, str]:
             continue
         candidate_url = _extract_addr_url(leaf_value)
         if not candidate_url:
+            continue
+        if not _is_probable_video_media_url(candidate_url, leaf_path):
             continue
         host = (urlparse(candidate_url).hostname or "").lower()
         score = 0
@@ -1620,6 +2168,8 @@ def _pick_any_tiktokcdn_url(info: dict) -> Tuple[str, str]:
         host = (urlparse(value).hostname or "").lower()
         if "tiktokcdn" not in host:
             continue
+        if not _is_probable_video_media_url(value, leaf_path):
+            continue
         score = 0
         if "/video/" in value:
             score += 50
@@ -1650,6 +2200,23 @@ def _parse_expire_timestamp(media_url: str) -> Optional[int]:
         return int(raw)
     except Exception:
         return None
+
+
+def _build_worker_media_url(direct_media_url: str, webpage_url: str) -> Optional[str]:
+    base = (TIKTOK_MEDIA_WORKER_BASE_URL or "").strip().rstrip("/")
+    if not base:
+        return None
+    media_url = (direct_media_url or "").strip()
+    if not media_url:
+        return None
+    media_path = TIKTOK_MEDIA_WORKER_MEDIA_PATH
+    if not media_path.startswith("/"):
+        media_path = "/" + media_path
+    query = {"u": media_url}
+    page_url = (webpage_url or "").strip()
+    if page_url:
+        query["fb"] = page_url
+    return f"{base}{media_path}?{urlencode(query)}"
 
 
 def _resolve_redirected_media_url(media_url: str, fmt: Optional[dict]) -> Optional[str]:
@@ -1685,6 +2252,116 @@ def _resolve_redirected_media_url(media_url: str, fmt: Optional[dict]) -> Option
         return final_url
     except Exception:
         return None
+
+
+def _media_host(media_url: Optional[str]) -> str:
+    return (urlparse(str(media_url or "")).hostname or "").lower()
+
+
+def _build_direct_media_debug_steps(info: dict, video_meta: dict) -> List[dict]:
+    steps: List[dict] = []
+    formats = info.get("formats") or []
+    formats_count = len(formats) if isinstance(formats, list) else 0
+    selected_url = str(video_meta.get("direct_media_url") or "")
+    selected_host = _media_host(selected_url)
+
+    steps.append(
+        {
+            "stage": "metadata_summary",
+            "status": "success",
+            "formats_count": formats_count,
+            "has_mobile_aweme": bool(info.get("__mobile_aweme")),
+            "mobile_api_source": info.get("__mobile_api_source"),
+            "mobile_enrich_debug": info.get("__mobile_enrich_debug"),
+            "mobile_enrich_error": info.get("__mobile_enrich_error"),
+        }
+    )
+
+    requested_url = str(info.get("url") or "").strip()
+    steps.append(
+        {
+            "stage": "candidate_requested",
+            "status": "success" if requested_url else "empty",
+            "url": requested_url or None,
+            "host": _media_host(requested_url) if requested_url else None,
+            "preferred": _is_preferred_tiktok_video_url(requested_url) if requested_url else False,
+        }
+    )
+
+    mobile_url, mobile_format_id, mobile_source = _pick_mobile_direct_url(info)
+    steps.append(
+        {
+            "stage": "candidate_mobile_direct",
+            "status": "success" if mobile_url else "empty",
+            "url": mobile_url or None,
+            "host": _media_host(mobile_url) if mobile_url else None,
+            "format_id": mobile_format_id or None,
+            "source": mobile_source or None,
+            "preferred": _is_preferred_tiktok_video_url(mobile_url) if mobile_url else False,
+        }
+    )
+
+    nested_url, nested_path = _pick_any_tiktokcdn_url(info)
+    steps.append(
+        {
+            "stage": "candidate_nested_tiktokcdn",
+            "status": "success" if nested_url else "empty",
+            "url": nested_url or None,
+            "host": _media_host(nested_url) if nested_url else None,
+            "path": nested_path or None,
+            "preferred": _is_preferred_tiktok_video_url(nested_url) if nested_url else False,
+        }
+    )
+
+    download_fmt = _choose_download_playback_candidate(info)
+    download_url = str(download_fmt.get("url") or "").strip() if isinstance(download_fmt, dict) else ""
+    steps.append(
+        {
+            "stage": "candidate_download_format",
+            "status": "success" if download_url else "empty",
+            "url": download_url or None,
+            "host": _media_host(download_url) if download_url else None,
+            "format_id": str(download_fmt.get("format_id") or "").strip() if isinstance(download_fmt, dict) else None,
+            "preferred": _is_preferred_tiktok_video_url(download_url) if download_url else False,
+        }
+    )
+
+    cdn_fmt = _choose_tiktokcdn_playback_candidate(info)
+    cdn_url = str(cdn_fmt.get("url") or "").strip() if isinstance(cdn_fmt, dict) else ""
+    steps.append(
+        {
+            "stage": "candidate_tiktokcdn_format",
+            "status": "success" if cdn_url else "empty",
+            "url": cdn_url or None,
+            "host": _media_host(cdn_url) if cdn_url else None,
+            "format_id": str(cdn_fmt.get("format_id") or "").strip() if isinstance(cdn_fmt, dict) else None,
+            "preferred": _is_preferred_tiktok_video_url(cdn_url) if cdn_url else False,
+        }
+    )
+
+    steps.append(
+        {
+            "stage": "final_selection",
+            "status": "success" if selected_url else "empty",
+            "selected_url": selected_url or None,
+            "selected_host": selected_host or None,
+            "selected_source": video_meta.get("direct_media_source"),
+            "selected_format_id": video_meta.get("direct_media_format_id"),
+            "preferred": _is_preferred_tiktok_video_url(selected_url) if selected_url else False,
+        }
+    )
+
+    if selected_url and "webapp-prime" in selected_host:
+        steps.append(
+            {
+                "stage": "selection_warning",
+                "status": "warning",
+                "reason": "No preferred TikTok CDN video URL was discovered from current metadata.",
+                "selected_host": selected_host,
+            }
+        )
+
+    return steps
 
 
 def _build_video_metadata(info: dict) -> dict:
@@ -1745,6 +2422,7 @@ def _build_video_metadata(info: dict) -> dict:
         if resolved_url and "tiktokcdn" in resolved_host:
             direct_media_url = resolved_url
             direct_media_source = "resolved_redirect"
+    worker_media_url = _build_worker_media_url(direct_media_url, webpage_url)
 
     return {
         "id": video_id or None,
@@ -1759,6 +2437,7 @@ def _build_video_metadata(info: dict) -> dict:
         "direct_media_ext": direct_media_ext or None,
         "direct_media_expires_at": _parse_expire_timestamp(direct_media_url) if direct_media_url else None,
         "direct_media_source": direct_media_source if direct_media_url else None,
+        "worker_media_url": worker_media_url,
     }
 
 
@@ -1768,6 +2447,7 @@ def get_tiktok_info_payload(url: str, preferred_lang: Optional[str] = None) -> d
     languages = _collect_languages(info)
     available_codes = [item["code"] for item in languages]
     video_meta = _build_video_metadata(info)
+    debug_steps = _build_direct_media_debug_steps(info, video_meta)
 
     default_lang = ""
     fallback_order: List[str] = []
@@ -1780,6 +2460,7 @@ def get_tiktok_info_payload(url: str, preferred_lang: Optional[str] = None) -> d
         "ok": True,
         "platform": "tiktok",
         "video": video_meta,
+        "debug_steps": debug_steps,
         "subtitle": {
             "available": len(languages) > 0,
             "languages": languages,

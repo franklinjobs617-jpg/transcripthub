@@ -12,6 +12,9 @@ import type { BillingCycle, PayPalIntent, PaymentChannel } from "@/lib/payment-t
 type CreateRequestBody = {
   channel?: PaymentChannel;
   planCode?: string;
+  type?: string;
+  project?: string;
+  googleUserId?: string;
   billingCycle?: BillingCycle;
   paypalIntent?: PayPalIntent;
 };
@@ -22,8 +25,10 @@ function extractCheckoutUrl(payload: unknown): string | null {
   const dataObj = (obj.data && typeof obj.data === "object" ? obj.data : null) as
     | Record<string, unknown>
     | null;
+  const dataStr = typeof obj.data === "string" ? obj.data : null;
 
   const candidates = [
+    dataStr,
     obj.checkoutUrl,
     obj.url,
     obj.paymentUrl,
@@ -98,13 +103,24 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as CreateRequestBody;
     const channel = body.channel;
     const planCode = body.planCode;
+    const requestedType = typeof body.type === "string" ? body.type.trim() : "";
+    const requestedProject = typeof body.project === "string" ? body.project.trim() : "";
+    const requestedGoogleUserId =
+      typeof body.googleUserId === "string" ? body.googleUserId.trim() : "";
+    const hasKnownPlanCode = typeof planCode === "string" && isKnownPlanCode(planCode);
+    const normalizedPlanCode = hasKnownPlanCode
+      ? (planCode as Parameters<typeof mapPlanCodeToBackend>[0])
+      : undefined;
 
     if (!channel || (channel !== "stripe" && channel !== "paypal")) {
       return errorResponse("INVALID_CHANNEL", "channel must be stripe or paypal", 400);
     }
 
-    if (!planCode || !isKnownPlanCode(planCode)) {
+    if (channel === "paypal" && !hasKnownPlanCode) {
       return errorResponse("INVALID_PLAN", "Unsupported plan code.", 400);
+    }
+    if (channel === "stripe" && !requestedType && !hasKnownPlanCode) {
+      return errorResponse("INVALID_TYPE", "Stripe payment requires type or valid plan code.", 400);
     }
 
     const token = getBearerTokenFromHeaders(request.headers);
@@ -116,34 +132,36 @@ export async function POST(request: NextRequest) {
       return errorResponse("UNAUTHORIZED", "Unable to verify current user.", 401);
     }
 
-    const appBaseUrl = getAppBaseUrlFromHeaders(request.headers);
-    const successUrl = `${appBaseUrl}/payment/success?channel=${channel}`;
-    const cancelUrl = `${appBaseUrl}/payment/cancel?channel=${channel}`;
-
-    const backendPlanCode = mapPlanCodeToBackend(planCode);
+    const backendPlanCode =
+      requestedType ||
+      (normalizedPlanCode ? mapPlanCodeToBackend(normalizedPlanCode) : "");
+    if (!backendPlanCode) {
+      return errorResponse("INVALID_TYPE", "Unable to resolve backend type.", 400);
+    }
     const billingBase = getBillingBackendBaseUrl();
 
-    const commonPayload = {
-      project: "transcripthub",
-      type: backendPlanCode,
-      planCode: backendPlanCode,
-      billingCycle: body.billingCycle,
-      googleUserId: authUser?.googleUserId,
-      email: authUser?.email,
-      userId: authUser?.id,
-      successUrl,
-      cancelUrl,
-    };
-
     if (channel === "stripe") {
+      const resolvedGoogleUserId = requestedGoogleUserId || authUser.googleUserId;
+      if (!resolvedGoogleUserId) {
+        return errorResponse(
+          "USER_ID_MISSING",
+          "googleUserId is required for Stripe checkout.",
+          400
+        );
+      }
       const stripePath = process.env.BILLING_STRIPE_CREATE_PATH || "/prod-api/stripe/getPayUrl";
+      const stripePayload = {
+        project: requestedProject || "transcripthub",
+        type: backendPlanCode,
+        googleUserId: resolvedGoogleUserId,
+      };
       const upstream = await fetchWithTimeout(`${billingBase}${stripePath}`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           ...(token ? { authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(commonPayload),
+        body: JSON.stringify(stripePayload),
         timeoutMs: 18000,
       });
 
@@ -173,8 +191,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const appBaseUrl = getAppBaseUrlFromHeaders(request.headers);
+    const successUrl = `${appBaseUrl}/payment/success?channel=${channel}`;
+    const cancelUrl = `${appBaseUrl}/payment/cancel?channel=${channel}`;
+    const commonPayload = {
+      project: requestedProject || "transcripthub",
+      type: backendPlanCode,
+      planCode: backendPlanCode,
+      billingCycle: body.billingCycle,
+      googleUserId: requestedGoogleUserId || authUser?.googleUserId,
+      email: authUser?.email,
+      userId: authUser?.id,
+      successUrl,
+      cancelUrl,
+    };
+
     const paypalIntent: PayPalIntent =
-      body.paypalIntent || (planCode === "payg_150" ? "capture" : "subscription");
+      body.paypalIntent ||
+      (normalizedPlanCode === "payg_150" ? "capture" : "subscription");
     const paypalPath =
       paypalIntent === "subscription"
         ? process.env.BILLING_PAYPAL_CREATE_SUBSCRIPTION_PATH ||

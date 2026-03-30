@@ -1,11 +1,17 @@
 export function getBillingBackendBaseUrl(): string {
+  const candidates = [
+    process.env.BILLING_BASE_URL,
+    process.env.NEXT_PUBLIC_BILLING_BASE_URL,
+    process.env.AUTH_BASE_URL,
+    process.env.NEXT_PUBLIC_AUTH_BASE_URL,
+  ];
   const baseUrl =
-    process.env.BILLING_BASE_URL ||
-    process.env.NEXT_PUBLIC_BILLING_BASE_URL ||
-    "";
+    candidates.find((item) => typeof item === "string" && item.trim().length > 0)?.trim() || "";
 
   if (!baseUrl) {
-    throw new Error("Billing backend base URL is not configured.");
+    throw new Error(
+      "Billing backend base URL is not configured. Please set BILLING_BASE_URL or NEXT_PUBLIC_BILLING_BASE_URL."
+    );
   }
 
   return baseUrl.replace(/\/+$/, "");

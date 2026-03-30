@@ -14,7 +14,7 @@ export function SiteFooter() {
                     {/* Column 1: Brand & SEO Pitch */}
                     <div className="col-span-2 lg:col-span-2">
                         <Link href="/" className="flex items-center gap-2.5 mb-6">
-                            <div className="h-8 w-8 bg-app-primary rounded-lg flex items-center justify-center text-white shadow-sm">
+                            <div className="h-8 w-8 bg-app-primary rounded-lg flex items-center justify-center text-app-primary-foreground shadow-sm">
                                 <Zap className="h-4 w-4" />
                             </div>
                             <span className="font-bold text-xl tracking-tight">Transcripthub</span>

@@ -15,9 +15,11 @@ export function isKnownPlanCode(value: string): value is PaymentPlanCode {
 
 export function mapPlanCodeToBackend(planCode: PaymentPlanCode): string {
   const map: Record<PaymentPlanCode, string> = {
-    pro_monthly: process.env.BILLING_PLAN_PRO_MONTHLY || "pro_monthly",
-    pro_yearly: process.env.BILLING_PLAN_PRO_YEARLY || "pro_yearly",
-    payg_150: process.env.BILLING_PLAN_PAYG_150 || "payg_150",
+    pro_monthly:
+      process.env.BILLING_PLAN_PRO_MONTHLY || "transcripthub_pro_monthly",
+    pro_yearly:
+      process.env.BILLING_PLAN_PRO_YEARLY || "transcripthub_pro_yearly",
+    payg_150: process.env.BILLING_PLAN_PAYG_150 || "pay_as_you_go",
   };
 
   return map[planCode];

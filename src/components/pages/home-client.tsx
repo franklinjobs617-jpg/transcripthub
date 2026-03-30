@@ -397,7 +397,7 @@ export function HomeClient() {
               <button
                 type="submit"
                 disabled={isRouting}
-                className="ui-tool-submit group relative flex h-14 sm:h-auto items-center justify-center gap-2 rounded-xl px-8 text-base font-bold text-white bg-app-primary hover:bg-app-primary/90 shadow-md transition-all whitespace-nowrap"
+                className="ui-tool-submit group relative flex h-14 sm:h-auto items-center justify-center gap-2 rounded-xl px-8 text-base font-bold text-app-primary-foreground bg-app-primary hover:bg-app-primary/90 shadow-md transition-all whitespace-nowrap"
               >
                 {isRouting ? (
                   <>
@@ -782,7 +782,8 @@ export function HomeClient() {
             </h2>
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="ui-inverse-cta-btn h-16 rounded-2xl px-10 text-lg font-bold"
+              className="ui-inverse-cta-btn h-16 rounded-2xl px-10 text-lg font-bold !text-slate-900 dark:!text-slate-900 opacity-100"
+              style={{ color: "#0f172a" }}
             >
               Start Extracting Now - Free
             </button>

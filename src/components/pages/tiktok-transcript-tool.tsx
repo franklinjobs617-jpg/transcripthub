@@ -438,8 +438,11 @@ export default function TikTokTranscriptTool() {
   }, []);
 
   const thumbnailUrl = info?.video.thumbnail || content?.video?.thumbnail || "";
+  const workerMediaUrl =
+    info?.video.worker_media_url || content?.video?.worker_media_url || "";
   const directMediaUrl =
     info?.video.direct_media_url || content?.video?.direct_media_url || "";
+  const effectiveMediaUrl = workerMediaUrl || directMediaUrl;
   const webpageUrl =
     info?.video.webpage_url || content?.video?.webpage_url || submittedUrl || "";
   const directMediaExpiresAt =
@@ -448,16 +451,16 @@ export default function TikTokTranscriptTool() {
     null;
   const directMediaSource =
     info?.video.direct_media_source || content?.video?.direct_media_source || "";
-  const directMediaHost = useMemo(() => {
-    if (!directMediaUrl) {
+  const effectiveMediaHost = useMemo(() => {
+    if (!effectiveMediaUrl) {
       return "";
     }
     try {
-      return new URL(directMediaUrl).host;
+      return new URL(effectiveMediaUrl).host;
     } catch {
       return "";
     }
-  }, [directMediaUrl]);
+  }, [effectiveMediaUrl]);
   const sourceLabel =
     content?.source === "raw"
       ? "Built-in subtitles"
@@ -506,8 +509,9 @@ export default function TikTokTranscriptTool() {
     !isFailurePlaceholder &&
     previewSegments.length > 0 &&
     (content.content.char_count || 0) > 0;
-  const directLinkLikelyBrowserBlocked = directMediaHost.includes("webapp-prime");
-  const canDownloadSourceVideo = !!directMediaUrl && transcriptReady;
+  const directLinkLikelyBrowserBlocked =
+    !workerMediaUrl && effectiveMediaHost.includes("webapp-prime");
+  const canDownloadSourceVideo = !!effectiveMediaUrl && transcriptReady;
 
   return (
     <div className="w-full max-w-6xl">
@@ -627,9 +631,9 @@ export default function TikTokTranscriptTool() {
                     Open TikTok Page
                   </a>
                 ) : null}
-                {directMediaUrl && canDownloadSourceVideo ? (
+                {effectiveMediaUrl && canDownloadSourceVideo ? (
                   <a
-                    href={directMediaUrl}
+                    href={effectiveMediaUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold"
@@ -637,7 +641,7 @@ export default function TikTokTranscriptTool() {
                     Download Source Video
                   </a>
                 ) : null}
-                {directMediaUrl && !canDownloadSourceVideo ? (
+                {effectiveMediaUrl && !canDownloadSourceVideo ? (
                   <button
                     type="button"
                     disabled
@@ -651,7 +655,7 @@ export default function TikTokTranscriptTool() {
                     This direct URL may fail in browser due TikTok anti-hotlink policy.
                   </p>
                 ) : null}
-                {(directMediaExpiresAt || directMediaHost) ? (
+                {(directMediaExpiresAt || effectiveMediaHost) ? (
                   <details className="rounded-md border border-app-border bg-app-surface px-2 py-1.5">
                     <summary className="cursor-pointer font-semibold text-app-text">
                       Direct link details
@@ -661,9 +665,9 @@ export default function TikTokTranscriptTool() {
                         Expires at unix time: {directMediaExpiresAt}
                       </p>
                     ) : null}
-                    {directMediaHost ? (
+                    {effectiveMediaHost ? (
                       <p className="mt-1 text-[10px] leading-relaxed text-app-text-muted">
-                        Host: {directMediaHost}
+                        Host: {effectiveMediaHost}
                         {directMediaSource ? ` (${directMediaSource})` : ""}
                       </p>
                     ) : null}
