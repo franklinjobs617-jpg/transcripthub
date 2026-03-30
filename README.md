@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Transcripthub Web
 
-## Getting Started
+Next.js frontend for transcript extraction and billing flows.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Required environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Auth
 
-## Learn More
+- `NEXT_PUBLIC_AUTH_BASE_URL`
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+- `NEXT_PUBLIC_GOOGLE_REDIRECT_URI`
 
-To learn more about Next.js, take a look at the following resources:
+### Transcript backend
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `TRANSCRIPT_BACKEND_URL` (or `NEXT_PUBLIC_TRANSCRIPT_BACKEND_URL`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Billing / payment
 
-## Deploy on Vercel
+- `NEXT_PUBLIC_BILLING_BASE_URL`
+- `NEXT_PUBLIC_PAYMENTS_ENABLED` (`true` by default, set `false` to hide paid checkout)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Optional backend path overrides
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `BILLING_STRIPE_CREATE_PATH`
+- `BILLING_STRIPE_VERIFY_PATH`
+- `BILLING_PAYPAL_CREATE_ORDER_PATH`
+- `BILLING_PAYPAL_CREATE_SUBSCRIPTION_PATH`
+- `BILLING_PAYPAL_CAPTURE_PATH`
+- `BILLING_PAYPAL_VERIFY_SUBSCRIPTION_PATH`
+- `BILLING_PORTAL_PATH`
+- `BILLING_ORDERS_PATH`
+
+## Payment routes (frontend BFF)
+
+- `POST /api/pay/create`
+- `POST /api/pay/verify`
+- `POST /api/pay/portal`
+- `GET /api/pay/orders`
+
+All routes return unified payloads:
+
+- success: `{ ok: true, data: ... }`
+- failure: `{ ok: false, error: { code, message, details? } }`
+
+## Payment pages
+
+- `/pricing`
+- `/payment/success`
+- `/payment/cancel`
+- `/billing`
+
+## Notes
+
+- Payment entitlements are backend-authoritative.
+- Transcript content APIs now forward auth headers and return a unified `INSUFFICIENT_CREDITS` error when logged-in credits are exhausted.
+
