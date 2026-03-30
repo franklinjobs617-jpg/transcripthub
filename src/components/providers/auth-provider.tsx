@@ -7,6 +7,7 @@ import {
   clearStoredAuthUser,
   getStoredAuthToken,
   getStoredAuthUser,
+  markLoginSuccessFlag,
   setStoredAuthToken,
   setStoredAuthUser,
 } from "@/lib/auth-session";
@@ -240,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setStoredAuthToken(parsed.token);
       setStoredAuthUser(parsed.user);
+      markLoginSuccessFlag();
       setUser(parsed.user);
       setIsAuthenticating(false);
       setAuthError("");

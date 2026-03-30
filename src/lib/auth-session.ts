@@ -15,6 +15,7 @@ export const AUTH_STORAGE_KEY = "loggedInUser";
 export const AUTH_LEGACY_STORAGE_KEY = "transcripthub_auth_user";
 export const AUTH_TOKEN_STORAGE_KEY = "auth_token";
 export const AUTH_CHANGE_EVENT = "transcripthub-auth-change";
+export const AUTH_LOGIN_SUCCESS_FLAG = "transcripthub-login-success";
 
 function notifyAuthChanged(): void {
   if (typeof window === "undefined") return;
@@ -78,4 +79,18 @@ export function clearStoredAuthToken(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
   notifyAuthChanged();
+}
+
+export function markLoginSuccessFlag(): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(AUTH_LOGIN_SUCCESS_FLAG, "1");
+}
+
+export function consumeLoginSuccessFlag(): boolean {
+  if (typeof window === "undefined") return false;
+  const flagged = window.sessionStorage.getItem(AUTH_LOGIN_SUCCESS_FLAG) === "1";
+  if (flagged) {
+    window.sessionStorage.removeItem(AUTH_LOGIN_SUCCESS_FLAG);
+  }
+  return flagged;
 }
