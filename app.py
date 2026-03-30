@@ -36,9 +36,9 @@ DOWNLOAD_FOLDER = os.path.join(BASE_DIR, "downloads")
 BATCH_TEMP_FOLDER = os.path.join(BASE_DIR, "batch_temp") 
 SUBTITLE_TEMP_FOLDER = os.path.join(BASE_DIR, "subtitle_temp")
 
-ARK_API_KEY = "3a4b60e4-f692-4210-b26e-a03c636fc804"
-ARK_MODEL = "glm-4-7-251222"
-ARK_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+ARK_API_KEY = os.getenv("ARK_API_KEY", "").strip()
+ARK_MODEL = os.getenv("ARK_MODEL", "glm-4-7-251222").strip()
+ARK_URL = os.getenv("ARK_URL", "https://ark.cn-beijing.volces.com/api/v3/chat/completions").strip()
 
 # 确保文件夹存在
 for folder in [DOWNLOAD_FOLDER, BATCH_TEMP_FOLDER, SUBTITLE_TEMP_FOLDER]:
