@@ -1,83 +1,67 @@
-# transcripthub
-# TranscriptHub.net - AI Social Media Transcript Generator
+# Transcripthub Web
 
-**TranscriptHub.net** is a high-speed, AI-powered vertical generator designed to help content creators, marketers, and scriptwriters extract accurate text from social media videos instantly. 
+Next.js frontend for transcript extraction and billing flows.
 
-By leveraging **OpenAI Whisper**, this tool bridges the gap between viral video content and strategic content repurposing.
+## Run locally
 
----
+```bash
+npm install
+npm run dev
+```
 
-## 🚀 Key Features
+Open [http://localhost:3000](http://localhost:3000).
 
-*   **Multi-Platform Support**: Seamlessly extract transcripts from **TikTok** (videos/ads), **Instagram** (Reels/videos), and **Facebook**.
-*   **0-Friction UX**: No sign-up or login required for basic use. Paste a URL and get results in seconds.
-*   **AI-Powered Accuracy**: Integrated with state-of-the-art **Whisper AI** to ensure high precision even with background noise or varied accents.
-*   **1-Click Export**: Download results in **SRT, PDF, or TXT** formats for easy video editing and subtitle creation.
-*   **Strategic Insights**: Reverse-engineer viral success by analyzing script structures, hooks, and pacing.
+## Required environment variables
 
----
+### Auth
 
-## 🛠️ Technical Stack
+- `NEXT_PUBLIC_AUTH_BASE_URL`
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+- `NEXT_PUBLIC_GOOGLE_REDIRECT_URI`
 
-*   **Frontend**: Next.js (React) - Optimized for SEO and lightning-fast LCP.
-*   **Backend**: Python API - Handles complex video stream extraction and URL parsing.
-*   **AI Engine**: OpenAI Whisper API - High-performance Speech-to-Text (STT) processing.
-*   **Payment Integration**: Stripe Checkout - For seamless Pro Plan subscriptions and credit top-ups.
+### Transcript backend
 
----
+- `TRANSCRIPT_BACKEND_URL` (or `NEXT_PUBLIC_TRANSCRIPT_BACKEND_URL`)
 
-## 💰 Subscription & Credits
+### Billing / payment
 
-TranscriptHub uses a precise "Pay-as-you-go" and "Pro Subscription" model tailored for the short-form video ecosystem:
+- `NEXT_PUBLIC_BILLING_BASE_URL`
+- `NEXT_PUBLIC_PAYMENTS_ENABLED` (`true` by default, set `false` to hide paid checkout)
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
 
-*   **1 Credit = 3 Minutes**: Optimized for social media where 85% of videos are under 3 minutes.
-*   **Free Plan**: 3 credits per month (up to 3-min videos, online preview only).
-*   **Pro Monthly ($9.9)**: 100 credits/month, unlocks 1-Click Export and supports videos up to 20 minutes.
-*   **Pro Yearly ($79)**: 1,200 credits/year with priority processing.
+### Optional backend path overrides
 
----
+- `BILLING_STRIPE_CREATE_PATH`
+- `BILLING_STRIPE_VERIFY_PATH`
+- `BILLING_PAYPAL_CREATE_ORDER_PATH`
+- `BILLING_PAYPAL_CREATE_SUBSCRIPTION_PATH`
+- `BILLING_PAYPAL_CAPTURE_PATH`
+- `BILLING_PAYPAL_VERIFY_SUBSCRIPTION_PATH`
+- `BILLING_PORTAL_PATH`
+- `BILLING_ORDERS_PATH`
 
-## 🔒 Privacy & Compliance
+## Payment routes (frontend BFF)
 
-We prioritize user data safety and platform compliance:
-*   **No Storage Policy**: We do not store submitted video content or generated transcripts on our servers. All processing is session-based and confidential.
-*   **Non-Download Tool**: This is a transcription generator, not a video downloader, ensuring alignment with platform terms and AdSense safety.
+- `POST /api/pay/create`
+- `POST /api/pay/verify`
+- `POST /api/pay/portal`
+- `GET /api/pay/orders`
 
----
+All routes return unified payloads:
 
-## 📖 How It Works
+- success: `{ ok: true, data: ... }`
+- failure: `{ ok: false, error: { code, message, details? } }`
 
-1.  **Paste**: Find a top-performing TikTok, Instagram, or Facebook URL.
-2.  **Generate**: Click "Get Free Transcript." Our AI processes the audio stream in real-time.
-3.  **Repurpose**: Copy the text for script breakdown, or upgrade to export SRT files for your own content.
+## Payment pages
 
----
+- `/pricing`
+- `/payment/success`
+- `/payment/cancel`
+- `/billing`
 
-## 📈 Use Cases
+## Notes
 
-*   **For Creators**: Breakdown viral hooks and storytelling patterns.
-*   **For Marketers**: Deconstruct competitor ad campaigns at the script level.
-*   **For SEO Specialists**: Turn viral video scripts into SEO-optimized blog posts to capture search traffic.
-*   **For Editors**: Use generated text to structure pacing and cuts for maximum impact.
+- Payment entitlements are backend-authoritative.
+- Transcript content APIs now forward auth headers and return a unified `INSUFFICIENT_CREDITS` error when logged-in credits are exhausted.
 
----
-
-## 🏗️ Development Setup
-
-*(Optional: Include this if you plan to share code with other developers)*
-
-1.  **Clone the repo**:
-    ```bash
-    git clone https://github.com/your-username/transcripthub.git
-    ```
-2.  **Install dependencies**:
-    ```bash
-    npm install  # for frontend
-    pip install -r requirements.txt  # for backend
-    ```
-3.  **Environment Variables**:
-    Create a `.env` file and add your `OPENAI_API_KEY` and `STRIPE_SECRET_KEY`.
-
----
-
-**TranscriptHub.net** — *Decoding Viral Success, One Script at a Time.*

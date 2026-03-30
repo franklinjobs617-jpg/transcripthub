@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <rect width="1600" height="1000" rx="28" fill="#1B1020"/>
+  <rect x="48" y="48" width="1504" height="904" rx="22" fill="#25122F" stroke="#4B2A5E"/>
+  <rect x="86" y="86" width="620" height="830" rx="18" fill="#2B1437" stroke="#4A2B5B"/>
+  <rect x="120" y="126" width="240" height="26" rx="8" fill="#EC4899"/>
+  <rect x="120" y="172" width="542" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="202" width="508" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="232" width="470" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="276" width="542" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="306" width="498" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="336" width="460" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="380" width="542" height="16" rx="8" fill="#5B356D"/>
+  <rect x="120" y="410" width="510" height="16" rx="8" fill="#5B356D"/>
+  <rect x="738" y="86" width="776" height="830" rx="18" fill="#2B1437" stroke="#4A2B5B"/>
+  <rect x="774" y="126" width="290" height="26" rx="8" fill="#F97316"/>
+  <rect x="774" y="176" width="702" height="78" rx="12" fill="#301B3C" stroke="#543466"/>
+  <rect x="806" y="205" width="140" height="20" rx="8" fill="#EC4899"/>
+  <rect x="774" y="274" width="702" height="78" rx="12" fill="#301B3C" stroke="#543466"/>
+  <rect x="806" y="303" width="120" height="20" rx="8" fill="#A855F7"/>
+  <rect x="774" y="372" width="702" height="78" rx="12" fill="#301B3C" stroke="#543466"/>
+  <rect x="806" y="401" width="132" height="20" rx="8" fill="#F97316"/>
+  <rect x="774" y="492" width="340" height="54" rx="12" fill="#DB2777"/>
+  <rect x="1136" y="492" width="340" height="54" rx="12" fill="#281533" stroke="#543466"/>
+  <rect x="774" y="572" width="702" height="306" rx="14" fill="#301B3C" stroke="#543466"/>
+  <rect x="806" y="610" width="640" height="16" rx="8" fill="#5B356D"/>
+  <rect x="806" y="642" width="540" height="16" rx="8" fill="#5B356D"/>
+  <rect x="806" y="674" width="612" height="16" rx="8" fill="#5B356D"/>
+  <text x="120" y="840" fill="#FBCFE8" font-family="Inter, Arial" font-size="22" font-weight="700">Export Module Snapshot</text>
+  <text x="120" y="872" fill="#F5D0FE" font-family="Inter, Arial" font-size="16">Replace this with your real IG SRT/TXT export screenshot.</text>
+</svg>

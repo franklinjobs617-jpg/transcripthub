@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <rect width="1600" height="1000" rx="28" fill="#0F172A"/>
+  <rect x="48" y="48" width="1504" height="904" rx="22" fill="#111827" stroke="#243145"/>
+  <rect x="86" y="86" width="620" height="830" rx="18" fill="#0D1526" stroke="#1F2D44"/>
+  <rect x="120" y="126" width="210" height="26" rx="8" fill="#22D3EE"/>
+  <rect x="120" y="172" width="542" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="202" width="508" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="232" width="470" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="276" width="542" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="306" width="498" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="336" width="460" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="380" width="542" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="410" width="510" height="16" rx="8" fill="#334155"/>
+  <rect x="120" y="440" width="442" height="16" rx="8" fill="#334155"/>
+  <rect x="738" y="86" width="776" height="830" rx="18" fill="#0D1526" stroke="#1F2D44"/>
+  <rect x="774" y="126" width="260" height="26" rx="8" fill="#3B82F6"/>
+  <rect x="774" y="176" width="702" height="78" rx="12" fill="#121D2E" stroke="#2A3B57"/>
+  <rect x="806" y="205" width="140" height="20" rx="8" fill="#22D3EE"/>
+  <rect x="774" y="274" width="702" height="78" rx="12" fill="#121D2E" stroke="#2A3B57"/>
+  <rect x="806" y="303" width="120" height="20" rx="8" fill="#A855F7"/>
+  <rect x="774" y="372" width="702" height="78" rx="12" fill="#121D2E" stroke="#2A3B57"/>
+  <rect x="806" y="401" width="132" height="20" rx="8" fill="#10B981"/>
+  <rect x="774" y="492" width="340" height="54" rx="12" fill="#2563EB"/>
+  <rect x="1136" y="492" width="340" height="54" rx="12" fill="#111827" stroke="#2A3B57"/>
+  <rect x="774" y="572" width="702" height="306" rx="14" fill="#121D2E" stroke="#2A3B57"/>
+  <rect x="806" y="610" width="640" height="16" rx="8" fill="#334155"/>
+  <rect x="806" y="642" width="540" height="16" rx="8" fill="#334155"/>
+  <rect x="806" y="674" width="612" height="16" rx="8" fill="#334155"/>
+  <text x="120" y="840" fill="#93C5FD" font-family="Inter, Arial" font-size="22" font-weight="700">Export Module Snapshot</text>
+  <text x="120" y="872" fill="#94A3B8" font-family="Inter, Arial" font-size="16">Replace this with your real SRT/TXT export screenshot.</text>
+</svg>
