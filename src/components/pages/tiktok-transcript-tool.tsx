@@ -789,7 +789,7 @@ export default function TikTokTranscriptTool() {
               {errorCode === "INSUFFICIENT_CREDITS" ? (
                 <div className="mt-3">
                   <a
-                    href="/billing"
+                    href="/pricing"
                     className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
                   >
                     <CreditCard className="h-3.5 w-3.5" />

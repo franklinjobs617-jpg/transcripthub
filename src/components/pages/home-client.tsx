@@ -86,7 +86,7 @@ const KEYWORD_QUERIES = [
   },
   {
     phrase: "Start free, then unlock more after sign-in",
-    hint: "Try guest mode first and continue with credits when needed.",
+    hint: "Try guest access first and continue with starter credits after sign-in.",
     href: "/instagram-transcript",
   },
   {
@@ -140,7 +140,7 @@ const VALUE_POINTS = [
   },
   {
     title: "Guest-friendly onboarding",
-    desc: "Daily guest usage is available, then smooth login flow unlocks sign-in credits.",
+    desc: "Guest access is available, then smooth login flow unlocks starter credits.",
   },
   {
     title: "Built for SEO intent coverage",
@@ -181,7 +181,7 @@ const USE_CASES = [
 const HOME_FAQS = [
   {
     q: "Can I use this AI Transcript Generator without login?",
-    a: "Yes. You can start in guest mode. Login is required after the guest daily limit is reached.",
+    a: "Yes. You can start in guest mode. Login is required after the free guest limit is reached.",
   },
   {
     q: "When do credits get deducted?",
@@ -380,11 +380,11 @@ export function HomeClient() {
             <div className="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-app-text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
-                Guest mode available daily
+                Guest mode available
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
-                Sign in bonus: 5 credits
+                Sign in bonus: 2 credits
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Check className="h-3.5 w-3.5 text-emerald-500" />

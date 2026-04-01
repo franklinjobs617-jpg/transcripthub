@@ -12,6 +12,7 @@ type ConsumeCreditsMetadata = {
   platform?: string;
   linkKey?: string;
   dayKey?: string;
+  guestQuotaStrategy?: string;
   sourceUrl?: string;
 };
 

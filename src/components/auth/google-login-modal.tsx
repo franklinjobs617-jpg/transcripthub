@@ -104,7 +104,7 @@ export function GoogleLoginModal({
           <p className="mt-2 text-sm leading-relaxed text-app-text-muted sm:text-[0.95rem]">
             Sign in with Google to sync credits, keep transcript history, and continue
             your workflow across TikTok, Instagram, and Facebook pages. Sign in now
-            to get <span className="font-bold text-app-text">5 free credits</span>.
+            to get <span className="font-bold text-app-text">2 starter credits</span>.
           </p>
 
           <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
@@ -114,7 +114,7 @@ export function GoogleLoginModal({
             </div>
             <div className="ui-auth-feature">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Sign in bonus: 5 credits</span>
+              <span>Sign in bonus: 2 credits</span>
             </div>
           </div>
 

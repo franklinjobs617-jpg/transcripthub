@@ -168,7 +168,7 @@ function toFriendlyMessage(code?: string, fallback?: string): string {
     ASR_MEDIA_TOO_LARGE: "This video is too long for instant transcription. Please try a shorter clip.",
     ASR_NOT_CONFIGURED: "Transcription service is temporarily unavailable. Please try again soon.",
     ASR_FAILED: "We couldn't transcribe this video this time. Please retry or try a shorter clip.",
-    LOGIN_REQUIRED: "Free daily limit reached. Please sign in to continue.",
+    LOGIN_REQUIRED: "Free guest limit reached. Please sign in to continue.",
     INSUFFICIENT_CREDITS: "Your credits are currently insufficient. Please top up and try again.",
     RATE_LIMITED: "Too many requests right now. Please wait a moment and retry.",
     PERMISSION_DENIED: "Your account does not have permission for this action right now.",

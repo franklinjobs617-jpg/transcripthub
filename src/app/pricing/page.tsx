@@ -236,6 +236,7 @@ export default function PricingPage() {
           "Full transcript export",
           "SRT, TXT and PDF download",
           "Up to 20-minute video",
+          
           "Priority processing",
           isYearly ? "Save $40 every year" : "Switch to yearly anytime",
         ],

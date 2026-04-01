@@ -4,6 +4,7 @@ import type { RemoteAuthUser } from "@/lib/auth-backend";
 const GUEST_COOKIE_NAME = "th_guest_id";
 const DEFAULT_GUEST_DAILY_LIMIT = 2;
 const QUOTA_TIMEZONE = process.env.QUOTA_TIMEZONE || "Asia/Shanghai";
+const DEFAULT_GUEST_QUOTA_STRATEGY = "legacy_daily";
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
 const chargedLinkKeysByActorDay = new Map<string, Set<string>>();
@@ -34,10 +35,28 @@ export type GuestResolution = {
   shouldSetCookie: boolean;
 };
 
+export type GuestQuotaStrategy = "legacy_daily" | "lifetime_one_time";
+
+export type GuestQuotaPolicy = {
+  strategy: GuestQuotaStrategy;
+  dayKey: string;
+  guestLimit: number;
+};
+
 function parsePositiveInt(value: string | undefined, fallback: number): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
   return Math.floor(parsed);
+}
+
+function normalizeGuestQuotaStrategy(value: string | undefined): GuestQuotaStrategy {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "lifetime_one_time") {
+    return "lifetime_one_time";
+  }
+  return "legacy_daily";
 }
 
 function randomId(prefix: string): string {
@@ -101,6 +120,20 @@ export function getShanghaiDayKey(now = new Date()): string {
 
 export function getGuestDailyLimit(): number {
   return parsePositiveInt(process.env.GUEST_DAILY_LIMIT, DEFAULT_GUEST_DAILY_LIMIT);
+}
+
+export function getGuestQuotaStrategy(): GuestQuotaStrategy {
+  return normalizeGuestQuotaStrategy(
+    process.env.GUEST_QUOTA_STRATEGY || DEFAULT_GUEST_QUOTA_STRATEGY
+  );
+}
+
+export function getGuestQuotaPolicy(now = new Date()): GuestQuotaPolicy {
+  return {
+    strategy: getGuestQuotaStrategy(),
+    dayKey: getShanghaiDayKey(now),
+    guestLimit: getGuestDailyLimit(),
+  };
 }
 
 export function resolveGuestIdentity(request: Request): GuestResolution {

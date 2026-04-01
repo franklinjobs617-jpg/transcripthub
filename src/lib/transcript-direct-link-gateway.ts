@@ -11,8 +11,7 @@ import {
   buildLinkActorIdentity,
   buildLinkKey,
   getChargedCount,
-  getGuestDailyLimit,
-  getShanghaiDayKey,
+  getGuestQuotaPolicy,
   hasChargedLink,
   markLinkCharged,
   resolveGuestIdentity,
@@ -29,7 +28,7 @@ type ErrorBody = {
   };
 };
 
-const LOGIN_REQUIRED_MESSAGE = "Free daily limit reached. Please sign in to continue.";
+const LOGIN_REQUIRED_MESSAGE = "Free guest limit reached. Please sign in to continue.";
 const INSUFFICIENT_CREDITS_MESSAGE = "Your credits are currently insufficient. Please top up and retry.";
 const INTERNAL_ERROR_MESSAGE = "Direct-link service is temporarily unavailable. Please retry.";
 const RATE_LIMITED_MESSAGE = "Too many requests. Please wait a moment and try again.";
@@ -409,8 +408,9 @@ export async function handleTranscriptDirectLink(
 
   const bodyText = await request.text();
   const requestUrl = extractRequestUrl(bodyText);
-  const dayKey = getShanghaiDayKey();
-  const guestDailyLimit = getGuestDailyLimit();
+  const guestQuotaPolicy = getGuestQuotaPolicy();
+  const dayKey = guestQuotaPolicy.dayKey;
+  const guestLinkLimit = guestQuotaPolicy.guestLimit;
   const preLinkKey = buildLinkKey(platform, requestUrl);
 
   if (actor.actorType === "guest") {
@@ -420,7 +420,7 @@ export async function handleTranscriptDirectLink(
       dayKey,
       preLinkKey
     );
-    if (currentGuestCount >= guestDailyLimit && !isPreChargedByRequestLink) {
+    if (currentGuestCount >= guestLinkLimit && !isPreChargedByRequestLink) {
       return buildLoginRequiredResponse(request, guestResolution);
     }
   }
@@ -478,7 +478,7 @@ export async function handleTranscriptDirectLink(
   if (isSuccessfulDirectLink && !alreadyChargedByFinalKey) {
     if (actor.actorType === "guest") {
       const currentGuestCount = getChargedCount(actor.actorId, dayKey);
-      if (currentGuestCount >= guestDailyLimit) {
+      if (currentGuestCount >= guestLinkLimit) {
         return buildLoginRequiredResponse(request, guestResolution);
       }
 
@@ -498,6 +498,7 @@ export async function handleTranscriptDirectLink(
           platform,
           linkKey: finalLinkKey,
           dayKey,
+          guestQuotaStrategy: guestQuotaPolicy.strategy,
           sourceUrl: requestUrl,
         },
       });
