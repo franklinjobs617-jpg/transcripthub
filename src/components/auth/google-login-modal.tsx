@@ -19,7 +19,7 @@ export function GoogleLoginModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const { login, user, isAuthenticating, authError, clearAuthError } =
+  const { login, user, isAuthenticating, authError, clearAuthError, fallbackLogin } =
     useAuth();
 
   const handleClose = useCallback(() => {
@@ -160,9 +160,20 @@ export function GoogleLoginModal({
           </button>
 
           {authError ? (
-            <div className="ui-auth-error mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm font-medium">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{authError}</span>
+            <div className="ui-auth-error mt-4 flex flex-col items-start gap-2 rounded-xl px-3 py-2.5 text-sm font-medium">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+              {authError.includes("Popup blocked") ? (
+                <button
+                  type="button"
+                  onClick={() => fallbackLogin()}
+                  className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-app-accent hover:underline"
+                >
+                  Switch to full-page login
+                </button>
+              ) : null}
             </div>
           ) : null}
 

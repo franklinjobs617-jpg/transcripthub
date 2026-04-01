@@ -245,11 +245,11 @@ function getKieErrorMessage(payload: TikTokDirectLinkPayload): string {
   const kie = payload.kie;
   const details = kie?.error?.details as
     | {
-        code?: number;
-        msg?: string;
-        details?: { msg?: string; payload?: { msg?: string; code?: number } };
-        payload?: { msg?: string; code?: number };
-      }
+      code?: number;
+      msg?: string;
+      details?: { msg?: string; payload?: { msg?: string; code?: number } };
+      payload?: { msg?: string; code?: number };
+    }
     | undefined;
   const code =
     Number(details?.code) ||
@@ -620,34 +620,22 @@ export default function TikTokTranscriptTool() {
     info?.video.direct_media_url ||
     content?.video?.direct_media_url ||
     "";
-  const effectiveMediaUrl = directMediaUrl;
   const downloadSourceUrl = directMediaUrl;
   const webpageUrl =
     info?.video.webpage_url ||
     content?.video?.webpage_url ||
     submittedUrl ||
     "";
-  const directMediaExpiresAt =
-    directLink?.direct_link?.direct_media_expires_at ||
-    info?.video.direct_media_expires_at ||
-    content?.video?.direct_media_expires_at ||
-    null;
-  const directMediaSource =
-    directLink?.source ||
-    directLink?.direct_link?.direct_media_source ||
-    info?.video.direct_media_source ||
-    content?.video?.direct_media_source ||
-    "";
   const effectiveMediaHost = useMemo(() => {
-    if (!effectiveMediaUrl) {
+    if (!directMediaUrl) {
       return "";
     }
     try {
-      return new URL(effectiveMediaUrl).host;
+      return new URL(directMediaUrl).host;
     } catch {
       return "";
     }
-  }, [effectiveMediaUrl]);
+  }, [directMediaUrl]);
   const kieState = String(directLink?.kie?.state || "").toLowerCase();
   const kieSubmitted = directLink?.kie?.submitted === true;
   const kiePending =
@@ -661,37 +649,29 @@ export default function TikTokTranscriptTool() {
       : "Transcription pending";
   const loadingProgress = isBusy
     ? Math.max(
-        12,
-        Math.min(
-          95,
-          Math.round(((loadingStepIndex + 1) / LOADING_STEPS.length) * 100)
-        )
+      12,
+      Math.min(
+        95,
+        Math.round(((loadingStepIndex + 1) / LOADING_STEPS.length) * 100)
       )
+    )
     : content
-    ? 100
-    : 0;
-  const languageOptions =
-    info?.subtitle.languages.length && info.subtitle.languages.length > 0
-      ? info.subtitle.languages
-      : [{ code: "en", label: "English", source: "automatic" as const }];
+      ? 100
+      : 0;
   useEffect(() => {
     setThumbnailLoadFailed(false);
   }, [thumbnailUrl]);
   const isTranscriptUnavailable = content?.transcript_available === false;
   const isFailurePlaceholder =
     (content?.content.full_text || "").trim().toLowerCase() ===
-      "audio extracted successfully. transcription failed." ||
+    "audio extracted successfully. transcription failed." ||
     (content?.content.full_text || "").trim().toLowerCase() ===
-      "audio extracted successfully.";
+    "audio extracted successfully.";
   const loadingStatusText = isSubmitting
     ? "Fetching metadata and generating transcript..."
     : "Transcript ready";
   const shouldLimitPreviewHeight =
     previewSegments.length > 6 || previewText.length > 1500;
-  const showPreviewLoading =
-    (isSubmitting || kiePending) &&
-    previewSegments.length === 0 &&
-    !errorMessage;
   const transcriptReady =
     !isBusy &&
     !!content &&
@@ -699,368 +679,292 @@ export default function TikTokTranscriptTool() {
     !isFailurePlaceholder &&
     previewSegments.length > 0 &&
     (content.content.char_count || 0) > 0;
-  const directLinkLikelyBrowserBlocked =
-    effectiveMediaHost.includes("webapp-prime");
   const canDownloadSourceVideo = !!downloadSourceUrl;
 
   return (
     <>
       <div className="w-full max-w-6xl">
-      <form className="ui-tool-form mb-4 w-full" onSubmit={handleSubmit}>
-        <div className="ui-input-shell rounded-2xl border-cyan-300/60 bg-gradient-to-br from-white to-cyan-50/40 p-2.5 dark:border-cyan-900/50 dark:from-zinc-950 dark:to-cyan-950/20">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <LinkIcon className="ui-input-icon absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-80" />
-              <input
-                ref={urlInputRef}
-                type="url"
-                required
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder="Paste TikTok video link..."
-                className="ui-tool-input h-12 w-full rounded-xl border-none bg-transparent pl-10 pr-4 text-sm font-semibold text-app-text outline-none placeholder:text-app-text-muted/55 focus:ring-0"
+        <form className="ui-tool-form mb-4 w-full" onSubmit={handleSubmit}>
+          <div className="ui-input-shell rounded-2xl border-cyan-300/60 bg-gradient-to-br from-white to-cyan-50/40 p-2.5 dark:border-cyan-900/50 dark:from-zinc-950 dark:to-cyan-950/20">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <LinkIcon className="ui-input-icon absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-80" />
+                <input
+                  ref={urlInputRef}
+                  type="url"
+                  required
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder="Paste TikTok video link..."
+                  className="ui-tool-input h-12 w-full rounded-xl border-none bg-transparent pl-10 pr-4 text-sm font-semibold text-app-text outline-none placeholder:text-app-text-muted/55 focus:ring-0"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="ui-tool-submit ui-generate-btn h-12 shrink-0 rounded-xl px-6 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[190px]"
+              >
+                {isBusy ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </span>
+                ) : (
+                  "Generate Transcript"
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-xs text-app-text-muted">
+          <span className="font-medium">
+            Paste once and we handle fetch + transcription automatically.
+          </span>
+          <button
+            type="button"
+            onClick={() => setUrl(EXAMPLE_TIKTOK_URL)}
+            className="rounded-md px-2 py-1 font-semibold text-cyan-600 transition-colors hover:bg-cyan-50 hover:text-cyan-500 dark:text-cyan-300 dark:hover:bg-cyan-900/30 dark:hover:text-cyan-200"
+          >
+            Use example URL
+          </button>
+        </div>
+
+        {isBusy ? (
+          <div className="mb-5 rounded-xl border border-cyan-300/60 bg-cyan-50/80 px-4 py-3 dark:border-cyan-800/50 dark:bg-cyan-950/30">
+            <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-200">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {LOADING_STEPS[loadingStepIndex]}...
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-cyan-100/90 dark:bg-cyan-900/40">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-fuchsia-500 transition-all duration-300"
+                style={{ width: `${loadingProgress}%` }}
               />
             </div>
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="ui-tool-submit ui-generate-btn h-12 shrink-0 rounded-xl px-6 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[190px]"
-            >
-              {isBusy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing...
-                </span>
-              ) : (
-                "Generate Transcript"
-              )}
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-xs text-app-text-muted">
-        <span className="font-medium">
-          Paste once and we handle fetch + transcription automatically.
-        </span>
-        <button
-          type="button"
-          onClick={() => setUrl(EXAMPLE_TIKTOK_URL)}
-          className="rounded-md px-2 py-1 font-semibold text-cyan-600 transition-colors hover:bg-cyan-50 hover:text-cyan-500 dark:text-cyan-300 dark:hover:bg-cyan-900/30 dark:hover:text-cyan-200"
-        >
-          Use example URL
-        </button>
-      </div>
-
-      {isBusy ? (
-        <div className="mb-5 rounded-xl border border-cyan-300/60 bg-cyan-50/80 px-4 py-3 dark:border-cyan-800/50 dark:bg-cyan-950/30">
-          <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-200">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {LOADING_STEPS[loadingStepIndex]}...
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-cyan-100/90 dark:bg-cyan-900/40">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-500 via-blue-500 to-fuchsia-500 transition-all duration-300"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <div className="mt-1 text-xs text-cyan-700/80 dark:text-cyan-300/80">
-            {loadingStatusText} Running for {loadingSeconds}s.
-          </div>
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div
-          ref={errorCardRef}
-          className="mb-5 rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-4 text-rose-800 shadow-sm dark:border-rose-700/70 dark:bg-rose-950/35 dark:text-rose-200"
-        >
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/45 dark:text-rose-300">
-              <AlertCircle className="h-4 w-4" />
+            <div className="mt-1 text-xs text-cyan-700/80 dark:text-cyan-300/80">
+              {loadingStatusText} Running for {loadingSeconds}s.
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700/90 dark:text-rose-300/90">
-                Processing failed
-              </p>
-              <p className="mt-1 text-sm font-semibold leading-relaxed">
-                {errorMessage}
-              </p>
-              {errorCode === "INSUFFICIENT_CREDITS" ? (
-                <div className="mt-3">
-                  <a
-                    href="/pricing"
-                    className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
-                  >
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Top up credits
-                  </a>
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <div
+            ref={errorCardRef}
+            className="mb-5 rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-4 text-rose-800 shadow-sm dark:border-rose-700/70 dark:bg-rose-950/35 dark:text-rose-200"
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/45 dark:text-rose-300">
+                <AlertCircle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700/90 dark:text-rose-300/90">
+                  Processing failed
+                </p>
+                <p className="mt-1 text-sm font-semibold leading-relaxed">
+                  {errorMessage}
+                </p>
+                {errorCode === "INSUFFICIENT_CREDITS" ? (
+                  <div className="mt-3">
+                    <a
+                      href={`/pricing?plan=payg_150&from=insufficient_credits&returnUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "")}`}
+                      className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      Top up credits
+                    </a>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {info ? (
+          <div
+            ref={resultRef}
+            className="overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm"
+          >
+            <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+              <aside className="space-y-3">
+                <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
+                  {thumbnailProxyUrl && !thumbnailLoadFailed ? (
+                    <Image
+                      src={thumbnailProxyUrl}
+                      alt={info.video.title || "TikTok thumbnail"}
+                      width={540}
+                      height={960}
+                      unoptimized
+                      className="aspect-[9/16] w-full object-cover"
+                      onError={() => setThumbnailLoadFailed(true)}
+                    />
+                  ) : (
+                    <div className="flex aspect-[9/16] w-full items-center justify-center text-app-text-muted">
+                      <TikTokIcon className="h-6 w-6" />
+                    </div>
+                  )}
                 </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
+                <div className="space-y-2 rounded-xl border border-app-border bg-app-bg px-3 py-3 text-[11px] text-app-text-muted">
+                  <div className="rounded-md bg-app-surface px-2 py-1.5">
+                    Source:{" "}
+                    <span className="font-semibold text-app-text">
+                      {sourceLabel}
+                    </span>
+                  </div>
+                  {webpageUrl ? (
+                    <a
+                      href={webpageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ui-btn-secondary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-semibold"
+                    >
+                      Open TikTok Page
+                    </a>
+                  ) : null}
+                  {downloadSourceUrl && canDownloadSourceVideo ? (
+                    <a
+                      href={downloadSourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold"
+                    >
+                      Download Source Video
+                    </a>
+                  ) : null}
+                </div>
+              </aside>
 
-      {info ? (
-        <div
-          ref={resultRef}
-          className="overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm"
-        >
-          <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <aside className="space-y-3">
-              <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
-                {thumbnailProxyUrl && !thumbnailLoadFailed ? (
-                  <Image
-                    src={thumbnailProxyUrl}
-                    alt={info.video.title || "TikTok thumbnail"}
-                    width={540}
-                    height={960}
-                    unoptimized
-                    className="aspect-[9/16] w-full object-cover"
-                    onError={() => setThumbnailLoadFailed(true)}
-                  />
+              <main className="min-w-0 space-y-4">
+                <header className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="line-clamp-2 text-lg font-extrabold leading-tight text-app-text sm:text-xl">
+                      {info.video.title || "TikTok Video"}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-app-text-muted">
+                      <span className="flex items-center gap-1">
+                        By {info.video.uploader || "Creator"}
+                      </span>
+                      <span>•</span>
+                      <span>{formatTimestamp(info.video.duration as any)}</span>
+                    </div>
+                  </div>
+                </header>
+
+                {transcriptReady ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-app-border bg-app-bg p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => handleDownload("srt")}
+                          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          SRT
+                        </button>
+                        <button
+                          onClick={() => handleDownload("vtt")}
+                          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          VTT
+                        </button>
+                        <button
+                          onClick={() => handleDownload("txt_ts")}
+                          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          TXT (Time)
+                        </button>
+                        <button
+                          onClick={() => handleDownload("txt_plain")}
+                          className="ui-btn-secondary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          TXT
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleCopyPreview}
+                        className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-bold"
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy All
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="group relative rounded-2xl border border-app-border bg-app-bg p-5">
+                      <div className="mb-4 flex items-center justify-between border-b border-app-border pb-3">
+                        <div className="flex items-center gap-3">
+                          <Languages className="h-4 w-4 text-app-accent" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-app-text">
+                            Transcript Preview
+                          </span>
+                        </div>
+                        {hasReliableTimestamps ? (
+                          <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-app-text-muted hover:text-app-text">
+                            <input
+                              type="checkbox"
+                              checked={showTimestamps}
+                              onChange={(e) => setShowTimestamps(e.target.checked)}
+                              className="h-3.5 w-3.5 rounded border-app-border text-app-accent focus:ring-app-accent"
+                            />
+                            Show Timestamps
+                          </label>
+                        ) : null}
+                      </div>
+
+                      <div
+                        className={`ui-transcript-preview custom-scrollbar space-y-4 overflow-y-auto text-[15px] leading-relaxed text-app-text-muted ${shouldLimitPreviewHeight ? "max-h-[500px]" : ""
+                          }`}
+                      >
+                        {previewSegments.map((seg, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex gap-4 ${isParagraphMode ? "flex-col gap-1" : ""
+                              }`}
+                          >
+                            {showTimestampInPreview ? (
+                              <span className="min-w-[45px] shrink-0 font-mono text-xs font-bold text-app-accent/80">
+                                {formatTimestamp(seg.start)}
+                              </span>
+                            ) : null}
+                            <p className="flex-1 whitespace-pre-wrap">
+                              {seg.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex aspect-[9/16] w-full items-center justify-center text-app-text-muted">
-                    <TikTokIcon className="h-6 w-6" />
+                  <div className="rounded-2xl border border-dashed border-app-border bg-app-bg/50 p-12 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-app-surface text-app-text-muted">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                    <p className="mt-4 text-sm font-medium text-app-text-muted">
+                      Your transcript will appear here shortly...
+                    </p>
                   </div>
                 )}
-              </div>
-              <div className="space-y-2 rounded-xl border border-app-border bg-app-bg px-3 py-3 text-[11px] text-app-text-muted">
-                <div className="rounded-md bg-app-surface px-2 py-1.5">
-                  Source:{" "}
-                  <span className="font-semibold text-app-text">
-                    {sourceLabel}
-                  </span>
-                </div>
-                {webpageUrl ? (
-                  <a
-                    href={webpageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ui-btn-secondary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-semibold"
-                  >
-                    Open TikTok Page
-                  </a>
-                ) : null}
-                {downloadSourceUrl && canDownloadSourceVideo ? (
-                  <a
-                    href={downloadSourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold"
-                  >
-                    Download Source Video
-                  </a>
-                ) : null}
-                {downloadSourceUrl && !canDownloadSourceVideo ? (
-                  <button
-                    type="button"
-                    disabled
-                    className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    Download Source Video
-                  </button>
-                ) : null}
-                {directLinkLikelyBrowserBlocked ? (
-                  <p className="rounded-md border border-amber-300/70 bg-amber-50 px-2 py-1.5 text-[10px] leading-relaxed text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">
-                    This direct URL may fail in browser due TikTok anti-hotlink
-                    policy.
-                  </p>
-                ) : null}
-              </div>
-            </aside>
-
-            <main>
-              <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
-                <div className="mb-1.5 flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white">
-                    <TikTokIcon className="h-5 w-5" />
-                  </div>
-                  <h3 className="line-clamp-2 text-xl font-bold leading-tight text-app-text sm:text-[1.65rem]">
-                    {info.video.title || "TikTok Transcript"}
-                  </h3>
-                </div>
-                <p className="text-sm font-medium text-app-text-muted">
-                  Auto-detected language:{" "}
-                  {content?.lang_used || selectedLang || "en"}
-                </p>
-              </div>
-
-              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-app-border bg-app-bg/70 p-3">
-                <label className="relative inline-flex items-center">
-                  <Languages className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-app-text-muted" />
-                  <select
-                    value={selectedLang}
-                    onChange={(event) =>
-                      void handleLanguageChange(event.target.value)
-                    }
-                    disabled={isBusy}
-                    className="h-9 rounded-md border border-app-border bg-app-surface pl-7 pr-2 text-xs font-semibold text-app-text outline-none transition-colors hover:border-app-text-muted/50 focus:border-cyan-500 disabled:opacity-60"
-                  >
-                    {languageOptions.map((item) => (
-                      <option
-                        key={`${item.code}-${item.source}`}
-                        value={item.code}
-                      >
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => setShowTimestamps((prev) => !prev)}
-                  disabled={
-                    isBusy || !transcriptReady || !hasReliableTimestamps
-                  }
-                  className="inline-flex h-9 items-center rounded-md border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-text transition-colors hover:bg-app-bg disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  {hasReliableTimestamps
-                    ? showTimestamps
-                      ? "Hide timestamps"
-                      : "Show timestamps"
-                    : "No native timestamps"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopyPreview}
-                  disabled={!transcriptReady || !previewText}
-                  className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45"
-                >
-                  {copied ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                  {copied ? "Copied" : "Copy transcript"}
-                </button>
-              </div>
-
-              <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-app-text-muted">
-                  Export subtitle file
-                </p>
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
-                  <button
-                    type="button"
-                    onClick={() => handleDownload("srt")}
-                    disabled={!transcriptReady || !normalizedSegments.length}
-                    className="ui-btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    SRT (Recommended)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownload("vtt")}
-                    disabled={!transcriptReady || !normalizedSegments.length}
-                    className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    VTT
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownload("txt_ts")}
-                    disabled={!transcriptReady || !normalizedSegments.length}
-                    className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    TXT (TS)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDownload("txt_plain")}
-                    disabled={!transcriptReady || !normalizedSegments.length}
-                    className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    TXT
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-app-border bg-app-bg/60 p-3">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-text-muted">
-                  Preview - {content?.content.line_count || 0} lines -{" "}
-                  {content?.content.char_count || 0} chars
-                </p>
-                {isParagraphMode ? (
-                  <div className="mb-3 rounded-lg border border-cyan-200/70 bg-cyan-50 px-3 py-2 text-xs font-medium text-cyan-800 dark:border-cyan-800/60 dark:bg-cyan-950/35 dark:text-cyan-100">
-                    Native timestamps are unavailable for this transcript. We
-                    switched to readable paragraph mode.
-                  </div>
-                ) : null}
-                <div className="relative min-h-[180px]">
-                  <div
-                    className={`space-y-2.5 ${
-                      shouldLimitPreviewHeight
-                        ? "max-h-[460px] overflow-y-auto pr-1"
-                        : ""
-                    }`}
-                  >
-                    {isTranscriptUnavailable && isFailurePlaceholder ? (
-                      <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">
-                        No usable subtitles were generated for this video yet.
-                        Click <span className="font-bold">Refresh</span> to
-                        retry.
-                      </div>
-                    ) : previewSegments.length > 0 ? (
-                      previewSegments.map((segment, idx) => (
-                        <div
-                          key={`${segment.start}-${idx}`}
-                          className={`grid items-start gap-2.5 ${
-                            showTimestampInPreview
-                              ? "grid-cols-[86px_minmax(0,1fr)]"
-                              : "grid-cols-1"
-                          }`}
-                        >
-                          {showTimestampInPreview ? (
-                            <span className="pt-2 text-sm font-extrabold tabular-nums text-cyan-600 dark:text-cyan-300">
-                              {formatTimestamp(segment.start)}
-                            </span>
-                          ) : null}
-                          <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-[1.04rem] font-medium leading-8 text-app-text">
-                            {segment.text}
-                          </div>
-                        </div>
-                      ))
-                    ) : showPreviewLoading ? (
-                      <div className="rounded-lg border border-cyan-200/70 bg-cyan-50/80 px-4 py-3 text-base text-cyan-800 dark:border-cyan-800/60 dark:bg-cyan-950/35 dark:text-cyan-200">
-                        <span className="inline-flex items-center gap-2 font-semibold">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Transcription in progress, please wait...
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-app-text-muted">
-                        No transcript preview available.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {content?.transcript_available === false && content.asr_error ? (
-                <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">
-                  <span className="font-bold">Transcription failed:</span>{" "}
-                  {content.asr_error.message}
-                </div>
-              ) : null}
-            </main>
+              </main>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
       </div>
-      {isLoginModalOpen ? (
-        <GoogleLoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => setIsLoginModalOpen(false)}
-        />
-      ) : null}
+
+      <GoogleLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
     </>
   );
 }

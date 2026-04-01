@@ -100,9 +100,18 @@ export function PaymentSuccessClient() {
               channel: verifyRequest.channel,
               paymentStatus: result.data.paymentStatus,
             });
-            successRedirectTimerRef.current = window.setTimeout(() => {
-              router.replace("/");
-            }, 2000);
+
+            const postPaymentRedirect = window.sessionStorage.getItem("postPaymentRedirect");
+            if (postPaymentRedirect) {
+              window.sessionStorage.removeItem("postPaymentRedirect");
+              successRedirectTimerRef.current = window.setTimeout(() => {
+                router.replace(postPaymentRedirect);
+              }, 1800);
+            } else {
+              successRedirectTimerRef.current = window.setTimeout(() => {
+                router.replace("/");
+              }, 2000);
+            }
             return;
           }
 
@@ -125,6 +134,14 @@ export function PaymentSuccessClient() {
             channel: verifyRequest.channel,
             paymentStatus: result.data.paymentStatus,
           });
+
+          const postPaymentRedirect = window.sessionStorage.getItem("postPaymentRedirect");
+          if (postPaymentRedirect) {
+            window.sessionStorage.removeItem("postPaymentRedirect");
+            successRedirectTimerRef.current = window.setTimeout(() => {
+              router.replace(postPaymentRedirect);
+            }, 1800);
+          }
           return;
         }
 
@@ -243,4 +260,3 @@ export function PaymentSuccessClient() {
     </main>
   );
 }
-

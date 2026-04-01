@@ -185,6 +185,14 @@ export default function PricingPage() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const qs = new URLSearchParams(window.location.search);
+      const returnUrl = qs.get("returnUrl");
+      if (returnUrl) {
+        window.sessionStorage.setItem("postPaymentRedirect", returnUrl);
+      }
+    }
+
     const resetCheckoutUiState = () => {
       setLoadingPlan(null);
       setPaypalProcessingPlan(null);
@@ -220,8 +228,8 @@ export default function PricingPage() {
         price: "$0",
         period: "/forever",
         helper: "No card required",
-        credits: "3 credits / month",
-        features: ["1-minute preview", "No signup to try", "1-click copy", "Community support"],
+        credits: "3 successful videos / month",
+        features: ["1-minute preview", "Supports source video download", "No signup to try", "1-click copy"],
         cta: "Start Free",
         href: "/#hero",
       },
@@ -231,12 +239,12 @@ export default function PricingPage() {
         price: isYearly ? "$79" : "$9.9",
         period: isYearly ? "/year" : "/mo",
         helper: isYearly ? "$6.58/mo billed yearly" : "Monthly billing",
-        credits: isYearly ? "1200 credits / year" : "100 credits / month",
+        credits: isYearly ? "1200 successful videos / year" : "100 successful videos / month",
         features: [
           "Full transcript export",
           "SRT, TXT and PDF download",
+          "Supports source video download",
           "Up to 20-minute video",
-          
           "Priority processing",
           isYearly ? "Save $40 every year" : "Switch to yearly anytime",
         ],
@@ -253,9 +261,10 @@ export default function PricingPage() {
         price: "$29",
         period: "/once",
         helper: "Credits never expire",
-        credits: "150 credits total",
+        credits: "150 successful videos total",
         features: [
           "All Pro export formats",
+          "Supports source video download",
           "No recurring billing",
           "Lifetime credit validity",
           "Fast one-time checkout",
@@ -442,22 +451,20 @@ export default function PricingPage() {
                 <button
                   type="button"
                   onClick={() => setBillingCycle("monthly")}
-                  className={`flex-1 cursor-pointer rounded-xl px-4 py-3 text-sm font-black transition-all ${
-                    billingCycle === "monthly"
-                      ? "bg-app-bg text-app-text shadow-sm ring-1 ring-app-border"
-                      : "text-app-text-muted hover:text-app-text"
-                  }`}
+                  className={`flex-1 cursor-pointer rounded-xl px-4 py-3 text-sm font-black transition-all ${billingCycle === "monthly"
+                    ? "bg-app-bg text-app-text shadow-sm ring-1 ring-app-border"
+                    : "text-app-text-muted hover:text-app-text"
+                    }`}
                 >
                   Monthly
                 </button>
                 <button
                   type="button"
                   onClick={() => setBillingCycle("yearly")}
-                  className={`flex-1 cursor-pointer rounded-xl px-4 py-3 text-sm font-black transition-all ${
-                    billingCycle === "yearly"
-                      ? "ui-btn-primary"
-                      : "text-app-text-muted hover:text-app-text"
-                  }`}
+                  className={`flex-1 cursor-pointer rounded-xl px-4 py-3 text-sm font-black transition-all ${billingCycle === "yearly"
+                    ? "ui-btn-primary"
+                    : "text-app-text-muted hover:text-app-text"
+                    }`}
                 >
                   Yearly
                 </button>
@@ -504,11 +511,10 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <article
               key={plan.name}
-              className={`relative flex h-full flex-col overflow-hidden rounded-[2rem] border transition-transform duration-300 hover:-translate-y-1 ${
-                plan.highlight
-                  ? "border-app-accent/35 bg-[linear-gradient(180deg,rgba(59,102,204,0.14),rgba(255,255,255,0.97)_18%,rgba(255,255,255,0.99)_100%)] shadow-[0_32px_90px_-46px_rgba(59,102,204,0.5)] dark:bg-[linear-gradient(180deg,rgba(59,102,204,0.2),rgba(9,9,11,0.95)_18%,rgba(9,9,11,0.98)_100%)]"
-                  : "border-app-border bg-app-surface shadow-[0_24px_70px_-48px_rgba(15,23,42,0.38)]"
-              }`}
+              className={`relative flex h-full flex-col overflow-hidden rounded-[2rem] border transition-transform duration-300 hover:-translate-y-1 ${plan.highlight
+                ? "border-app-accent/35 bg-[linear-gradient(180deg,rgba(59,102,204,0.14),rgba(255,255,255,0.97)_18%,rgba(255,255,255,0.99)_100%)] shadow-[0_32px_90px_-46px_rgba(59,102,204,0.5)] dark:bg-[linear-gradient(180deg,rgba(59,102,204,0.2),rgba(9,9,11,0.95)_18%,rgba(9,9,11,0.98)_100%)]"
+                : "border-app-border bg-app-surface shadow-[0_24px_70px_-48px_rgba(15,23,42,0.38)]"
+                }`}
             >
               <div className="p-6 sm:p-7">
                 <div className="flex items-start justify-between gap-4">
@@ -543,11 +549,10 @@ export default function PricingPage() {
                 </p>
 
                 <div
-                  className={`mt-6 rounded-[1.4rem] border px-4 py-4 ${
-                    plan.highlight
-                      ? "border-app-accent/15 bg-white/70 dark:bg-app-bg/55"
-                      : "border-app-border bg-app-bg/75"
-                  }`}
+                  className={`mt-6 rounded-[1.4rem] border px-4 py-4 ${plan.highlight
+                    ? "border-app-accent/15 bg-white/70 dark:bg-app-bg/55"
+                    : "border-app-border bg-app-bg/75"
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-app-primary text-app-primary-foreground">
@@ -601,11 +606,10 @@ export default function PricingPage() {
                       type="button"
                       onClick={() => void handleStripePayment(plan)}
                       disabled={!PAYMENTS_ENABLED || loadingPlan === plan.planCode}
-                      className={`ui-btn-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${
-                        !PAYMENTS_ENABLED || loadingPlan === plan.planCode
-                          ? "cursor-not-allowed opacity-70"
-                          : ""
-                      }`}
+                      className={`ui-btn-primary flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-black ${!PAYMENTS_ENABLED || loadingPlan === plan.planCode
+                        ? "cursor-not-allowed opacity-70"
+                        : ""
+                        }`}
                     >
                       {loadingPlan === plan.planCode ? (
                         <>
@@ -656,79 +660,79 @@ export default function PricingPage() {
                         onCreateOrder={
                           plan.paypalIntent === "capture"
                             ? async () => {
-                                const created = await createPayment({
-                                  channel: "paypal",
-                                  planCode: plan.planCode!,
-                                  type: plan.backendType,
-                                  project: "transcripthub",
-                                  googleUserId: user?.googleUserId,
-                                  billingCycle,
-                                  paypalIntent: "capture",
-                                });
+                              const created = await createPayment({
+                                channel: "paypal",
+                                planCode: plan.planCode!,
+                                type: plan.backendType,
+                                project: "transcripthub",
+                                googleUserId: user?.googleUserId,
+                                billingCycle,
+                                paypalIntent: "capture",
+                              });
 
-                                if (!created.ok || !created.data.orderId) {
-                                  setPaymentError(
-                                    created.ok
-                                      ? "PayPal order was not created."
-                                      : created.error.message
-                                  );
-                                  bumpPaypalReloadSeed();
-                                  trackPaymentEvent("pay_create_fail", {
-                                    channel: "paypal",
-                                    planCode: plan.planCode,
-                                    code: created.ok
-                                      ? "PAYPAL_ORDER_ID_MISSING"
-                                      : created.error.code,
-                                  });
-                                  return "";
-                                }
-
-                                trackPaymentEvent("pay_create_success", {
+                              if (!created.ok || !created.data.orderId) {
+                                setPaymentError(
+                                  created.ok
+                                    ? "PayPal order was not created."
+                                    : created.error.message
+                                );
+                                bumpPaypalReloadSeed();
+                                trackPaymentEvent("pay_create_fail", {
                                   channel: "paypal",
                                   planCode: plan.planCode,
-                                  intent: "capture",
+                                  code: created.ok
+                                    ? "PAYPAL_ORDER_ID_MISSING"
+                                    : created.error.code,
                                 });
-                                return created.data.orderId;
+                                return "";
                               }
+
+                              trackPaymentEvent("pay_create_success", {
+                                channel: "paypal",
+                                planCode: plan.planCode,
+                                intent: "capture",
+                              });
+                              return created.data.orderId;
+                            }
                             : undefined
                         }
                         onCreateSubscription={
                           plan.paypalIntent === "subscription"
                             ? async () => {
-                                const created = await createPayment({
-                                  channel: "paypal",
-                                  planCode: plan.planCode!,
-                                  type: plan.backendType,
-                                  project: "transcripthub",
-                                  googleUserId: user?.googleUserId,
-                                  billingCycle,
-                                  paypalIntent: "subscription",
-                                });
+                              const created = await createPayment({
+                                channel: "paypal",
+                                planCode: plan.planCode!,
+                                type: plan.backendType,
+                                project: "transcripthub",
+                                googleUserId: user?.googleUserId,
+                                billingCycle,
+                                paypalIntent: "subscription",
+                              });
 
-                                if (!created.ok || !created.data.subscriptionId) {
-                                  setPaymentError(
-                                    created.ok
-                                      ? "PayPal subscription was not created."
-                                      : created.error.message
-                                  );
-                                  bumpPaypalReloadSeed();
-                                  trackPaymentEvent("pay_create_fail", {
-                                    channel: "paypal",
-                                    planCode: plan.planCode,
-                                    code: created.ok
-                                      ? "PAYPAL_SUBSCRIPTION_ID_MISSING"
-                                      : created.error.code,
-                                  });
-                                  return "";
-                                }
-
-                                trackPaymentEvent("pay_create_success", {
+                              if (!created.ok || !created.data.subscriptionId) {
+                                setPaymentError(
+                                  created.ok
+                                    ? "PayPal subscription was not created."
+                                    : created.error.message
+                                );
+                                bumpPaypalReloadSeed();
+                                trackPaymentEvent("pay_create_fail", {
                                   channel: "paypal",
                                   planCode: plan.planCode,
-                                  intent: "subscription",
+                                  code: created.ok
+                                    ? "PAYPAL_SUBSCRIPTION_ID_MISSING"
+                                    : created.error.code,
                                 });
-                                return created.data.subscriptionId;
+                                return "";
                               }
+
+                              trackPaymentEvent("pay_create_success", {
+                                channel: "paypal",
+                                planCode: plan.planCode,
+                                intent: "subscription",
+                              });
+                              return created.data.subscriptionId;
+                            }
                             : undefined
                         }
                         onApprove={async (data) => {
@@ -806,7 +810,7 @@ export default function PricingPage() {
             </div>
           ))}
         </section>
-        
+
         <section id="faq" className="mx-auto mt-14 w-full max-w-3xl">
           <h2 className="text-center text-2xl font-black tracking-[-0.04em] text-app-text sm:text-3xl">
             Frequently asked questions
@@ -815,7 +819,7 @@ export default function PricingPage() {
             {[
               {
                 q: "What is 1 credit?",
-                a: "1 credit covers up to 3 minutes of transcription. Longer videos use more credits proportionally.",
+                a: "1 credit equals 1 successful video conversion, regardless of the video length.",
               },
               {
                 q: "Can I switch from monthly to yearly later?",

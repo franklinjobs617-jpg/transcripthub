@@ -250,136 +250,136 @@ export default function FacebookTranscriptTool() {
   return (
     <>
       <div className="w-full max-w-6xl">
-      <form className="ui-tool-form mb-4 w-full" onSubmit={(e) => { e.preventDefault(); void submitUrl(url); }}>
-        <div className="ui-input-shell rounded-2xl border-cyan-300/60 bg-gradient-to-br from-white to-cyan-50/40 p-2.5">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <LinkIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-80" />
-              <input
-                ref={inputRef}
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="Paste Facebook video link..."
-                className="h-12 w-full rounded-xl border-none bg-transparent pl-10 pr-4 text-sm font-semibold outline-none"
-              />
-            </div>
-            <button type="submit" disabled={isSubmitting} className="ui-generate-btn h-12 rounded-xl px-6 text-sm font-bold disabled:opacity-60">
-              {isSubmitting ? "Processing..." : "Generate Transcript"}
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <div className="mb-5 flex items-center justify-between rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-xs text-app-text-muted">
-        <span className="font-medium">Paste once and we handle fetch + transcription.</span>
-        <button type="button" onClick={() => setUrl(EXAMPLE_FACEBOOK_URL)} className="rounded-md px-2 py-1 font-semibold text-cyan-600">
-          Use example URL
-        </button>
-      </div>
-
-      {isSubmitting ? (
-        <div className="mb-5 rounded-xl border border-cyan-300/60 bg-cyan-50/80 px-4 py-3">
-          <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Generating transcript...
-          </div>
-          <div className="mt-1 text-xs text-cyan-700/80">Generating transcript... Running for {loadingSeconds}s.</div>
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="mb-5 rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-4 text-rose-800">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-4 w-4" />
-            <div>
-              <p className="text-sm font-semibold leading-relaxed">
-                {errorMessage}
-              </p>
-              {errorCode === "INSUFFICIENT_CREDITS" ? (
-                <div className="mt-3">
-                  <a
-                    href="/pricing"
-                    className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
-                  >
-                    <CreditCard className="h-3.5 w-3.5" />
-                    Top up credits
-                  </a>
-                </div>
-              ) : null}
+        <form className="ui-tool-form mb-4 w-full" onSubmit={(e) => { e.preventDefault(); void submitUrl(url); }}>
+          <div className="ui-input-shell rounded-2xl border-cyan-300/60 bg-gradient-to-br from-white to-cyan-50/40 p-2.5">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <LinkIcon className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-80" />
+                <input
+                  ref={inputRef}
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="Paste Facebook video link..."
+                  className="h-12 w-full rounded-xl border-none bg-transparent pl-10 pr-4 text-sm font-semibold outline-none"
+                />
+              </div>
+              <button type="submit" disabled={isSubmitting} className="ui-generate-btn h-12 rounded-xl px-6 text-sm font-bold disabled:opacity-60">
+                {isSubmitting ? "Processing..." : "Generate Transcript"}
+              </button>
             </div>
           </div>
+        </form>
+
+        <div className="mb-5 flex items-center justify-between rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-xs text-app-text-muted">
+          <span className="font-medium">Paste once and we handle fetch + transcription.</span>
+          <button type="button" onClick={() => setUrl(EXAMPLE_FACEBOOK_URL)} className="rounded-md px-2 py-1 font-semibold text-cyan-600 transition-colors hover:bg-cyan-50">
+            Use example URL
+          </button>
         </div>
-      ) : null}
 
-      {info ? (
-        <div ref={resultRef} className="overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm">
-          <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <aside className="space-y-3">
-              <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
-                {thumbnailProxy ? (
-                  <Image src={thumbnailProxy} alt={videoTitle} width={540} height={960} unoptimized className="aspect-[9/16] w-full object-cover" />
-                ) : (
-                  <div className="flex aspect-[9/16] w-full items-center justify-center text-app-text-muted">
-                    <FacebookIcon className="h-6 w-6" />
+        {isSubmitting ? (
+          <div className="mb-5 rounded-xl border border-cyan-300/60 bg-cyan-50/80 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating transcript...
+            </div>
+            <div className="mt-1 text-xs text-cyan-700/80">Generating transcript... Running for {loadingSeconds}s.</div>
+          </div>
+        ) : null}
+
+        {errorMessage ? (
+          <div className="mb-5 rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-4 text-rose-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-4 w-4" />
+              <div>
+                <p className="text-sm font-semibold leading-relaxed">
+                  {errorMessage}
+                </p>
+                {errorCode === "INSUFFICIENT_CREDITS" ? (
+                  <div className="mt-3">
+                    <a
+                      href={`/pricing?plan=payg_150&from=insufficient_credits&returnUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "")}`}
+                      className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      Top up credits
+                    </a>
                   </div>
-                )}
+                ) : null}
               </div>
-              <div className="space-y-2 rounded-xl border border-app-border bg-app-bg px-3 py-3 text-[11px] text-app-text-muted">
-                <div className="rounded-md bg-app-surface px-2 py-1.5">Source: <span className="font-semibold text-app-text">{sourceLabel}</span></div>
-                {submittedUrl ? <a href={submittedUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-semibold">Open Facebook Page</a> : null}
-                {directVideoUrl ? <a href={directVideoUrl} target="_blank" rel="noreferrer" className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold">Download Source Video</a> : null}
-              </div>
-            </aside>
+            </div>
+          </div>
+        ) : null}
 
-            <main>
-              <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
-                <div className="mb-1.5 flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1877F2] text-white">
-                    <FacebookIcon className="h-5 w-5" />
-                  </div>
-                </div>
-                <h3 className="line-clamp-2 text-xl font-bold leading-tight text-app-text sm:text-[1.65rem]">{videoTitle}</h3>
-                <p className="text-sm font-medium text-app-text-muted">Auto-detected language: {content?.lang_used || "en"}</p>
-              </div>
-
-              <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-app-text-muted">Export subtitle file</p>
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
-                  <button type="button" onClick={() => downloadFile("facebook.srt", toSrt(segments), "application/x-subrip;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-xs font-bold disabled:opacity-45"><Download className="h-3.5 w-3.5" />SRT (Recommended)</button>
-                  <button type="button" onClick={() => downloadFile("facebook.txt", toTxt(segments, true), "text/plain;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Download className="h-3.5 w-3.5" />TXT (TS)</button>
-                  <button type="button" onClick={() => downloadFile("facebook_plain.txt", toTxt(segments, false), "text/plain;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Download className="h-3.5 w-3.5" />TXT</button>
-                  <button type="button" onClick={async () => { if (!previewText) return; await navigator.clipboard.writeText(previewText); setCopied(true); setTimeout(() => setCopied(false), 1200); }} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Copy className="h-3.5 w-3.5" />{copied ? "Copied" : "Copy"}</button>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-app-border bg-app-bg/60 p-3">
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-text-muted">Preview - {content?.content.line_count || 0} lines - {content?.content.char_count || 0} chars</p>
-                <div className="min-h-[180px]">
-                  {segments.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {segments.map((segment, idx) => (
-                        <div key={`${idx}-${segment.start}`} className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-[1.04rem] font-medium leading-8 text-app-text">
-                          {segment.text}
-                        </div>
-                      ))}
-                    </div>
-                  ) : showPreviewLoading ? (
-                    <div className="rounded-lg border border-cyan-200/70 bg-cyan-50/80 px-4 py-3 text-base text-cyan-800">
-                      <span className="inline-flex items-center gap-2 font-semibold">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Transcription is in progress, please wait...
-                      </span>
-                    </div>
+        {info ? (
+          <div ref={resultRef} className="overflow-hidden rounded-2xl border border-app-border bg-app-surface shadow-sm">
+            <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+              <aside className="space-y-3">
+                <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
+                  {thumbnailProxy ? (
+                    <Image src={thumbnailProxy} alt={videoTitle} width={540} height={960} unoptimized className="aspect-[9/16] w-full object-cover" />
                   ) : (
-                    <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-app-text-muted">No transcript preview available.</div>
+                    <div className="flex aspect-[9/16] w-full items-center justify-center text-app-text-muted">
+                      <FacebookIcon className="h-6 w-6" />
+                    </div>
                   )}
                 </div>
-              </div>
-            </main>
+                <div className="space-y-2 rounded-xl border border-app-border bg-app-bg px-3 py-3 text-[11px] text-app-text-muted">
+                  <div className="rounded-md bg-app-surface px-2 py-1.5">Source: <span className="font-semibold text-app-text">{sourceLabel}</span></div>
+                  {submittedUrl ? <a href={submittedUrl} target="_blank" rel="noreferrer" className="ui-btn-secondary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-semibold">Open Facebook Page</a> : null}
+                  {directVideoUrl ? <a href={directVideoUrl} target="_blank" rel="noreferrer" className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold">Download Source Video</a> : null}
+                </div>
+              </aside>
+
+              <main>
+                <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1877F2] text-white">
+                      <FacebookIcon className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <h3 className="line-clamp-2 text-xl font-bold leading-tight text-app-text sm:text-[1.65rem]">{videoTitle}</h3>
+                  <p className="text-sm font-medium text-app-text-muted">Auto-detected language: {content?.lang_used || "en"}</p>
+                </div>
+
+                <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-app-text-muted">Export subtitle file</p>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
+                    <button type="button" onClick={() => downloadFile("facebook.srt", toSrt(segments), "application/x-subrip;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-primary inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-xs font-bold disabled:opacity-45"><Download className="h-3.5 w-3.5" />SRT (Recommended)</button>
+                    <button type="button" onClick={() => downloadFile("facebook.txt", toTxt(segments, true), "text/plain;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Download className="h-3.5 w-3.5" />TXT (TS)</button>
+                    <button type="button" onClick={() => downloadFile("facebook_plain.txt", toTxt(segments, false), "text/plain;charset=utf-8")} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Download className="h-3.5 w-3.5" />TXT</button>
+                    <button type="button" onClick={async () => { if (!previewText) return; await navigator.clipboard.writeText(previewText); setCopied(true); setTimeout(() => setCopied(false), 1200); }} disabled={!transcriptReady} className="ui-btn-secondary inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-xs font-semibold disabled:opacity-45"><Copy className="h-3.5 w-3.5" />{copied ? "Copied" : "Copy"}</button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-app-border bg-app-bg/60 p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-text-muted">Preview - {content?.content.line_count || 0} lines - {content?.content.char_count || 0} chars</p>
+                  <div className="min-h-[180px]">
+                    {segments.length > 0 ? (
+                      <div className="space-y-2.5">
+                        {segments.map((segment, idx) => (
+                          <div key={`${idx}-${segment.start}`} className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-[1.04rem] font-medium leading-8 text-app-text">
+                            {segment.text}
+                          </div>
+                        ))}
+                      </div>
+                    ) : showPreviewLoading ? (
+                      <div className="rounded-lg border border-cyan-200/70 bg-cyan-50/80 px-4 py-3 text-base text-cyan-800">
+                        <span className="inline-flex items-center gap-2 font-semibold">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Transcription is in progress, please wait...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-app-text-muted">No transcript preview available.</div>
+                    )}
+                  </div>
+                </div>
+              </main>
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
       </div>
       {isLoginModalOpen ? (
         <GoogleLoginModal

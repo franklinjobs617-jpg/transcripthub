@@ -30,6 +30,7 @@ type AuthContextValue = {
   logout: () => void;
   refreshUser: () => Promise<void>;
   clearAuthError: () => void;
+  fallbackLogin: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -95,8 +96,8 @@ function normalizeAuthUser(user: AuthUser): AuthUser {
     typeof rawCredits === "number"
       ? rawCredits
       : typeof rawCredits === "string"
-      ? Number(rawCredits)
-      : undefined;
+        ? Number(rawCredits)
+        : undefined;
 
   return {
     ...user,
@@ -192,6 +193,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refreshRunningRef.current = false;
     }
   }, [logout]);
+
+  const fallbackLogin = useCallback(() => {
+    if (!GOOGLE_CLIENT_ID || !BACKEND_REDIRECT_URI || !AUTH_BASE_URL) return;
+    const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: BACKEND_REDIRECT_URI,
+      response_type: "code",
+      scope: "openid email profile",
+      prompt: "select_account",
+      state: `${Date.now()}_transcripthub`,
+    });
+    window.location.assign(`${googleAuthUrl}?${params.toString()}`);
+  }, []);
 
   const login = useCallback(async () => {
     if (!GOOGLE_CLIENT_ID || !BACKEND_REDIRECT_URI || !AUTH_BASE_URL) {
@@ -293,6 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshUser,
       clearAuthError,
+      fallbackLogin,
     }),
     [
       authError,
@@ -303,6 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshUser,
       user,
+      fallbackLogin,
     ]
   );
 
