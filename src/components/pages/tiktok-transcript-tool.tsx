@@ -1,26 +1,32 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import {
   AlertCircle,
   CheckCircle2,
+  CreditCard,
   Copy,
   Download,
   Languages,
   Link as LinkIcon,
   Loader2,
-  Music2,
 } from "lucide-react";
 
 import {
-  getTikTokTranscriptContent,
+  getTikTokDirectLink,
   getTikTokTranscriptInfo,
+  TikTokTranscriptApiError,
   type TikTokContentPayload,
+  type TikTokDirectLinkPayload,
   type TikTokInfoPayload,
 } from "@/lib/tiktok-transcript-api";
+import { GoogleLoginModal } from "@/components/auth/google-login-modal";
+import { useAuth } from "@/components/providers/auth-provider";
+import { TikTokIcon } from "@/components/shared/social-icons";
 
 const EXAMPLE_TIKTOK_URL =
-  "https://www.tiktok.com/@scout2015/video/6718335390845095173";
+  "https://www.tiktok.com/@fddxjbf/video/7613766437814930718?is_from_webapp=1&sender_device=pc";
 
 const LOADING_STEPS = [
   "Validating URL",
@@ -28,6 +34,8 @@ const LOADING_STEPS = [
   "Extracting audio",
   "Generating transcript",
 ] as const;
+const KIE_POLL_MAX_ROUNDS = 12;
+const KIE_POLL_INTERVAL_MS = 3000;
 
 type TranscriptSegment = {
   start: number;
@@ -55,7 +63,9 @@ function formatTimestamp(seconds: number): string {
   const minutes = Math.floor((total % 3600) / 60);
   const secs = total % 60;
   if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(
+      secs
+    ).padStart(2, "0")}`;
   }
   return `${minutes}:${String(secs).padStart(2, "0")}`;
 }
@@ -66,7 +76,10 @@ function formatSrtTime(seconds: number): string {
   const minutes = Math.floor((safe % 3600) / 60);
   const secs = Math.floor(safe % 60);
   const millis = Math.floor((safe - Math.floor(safe)) * 1000);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")},${String(millis).padStart(3, "0")}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0"
+  )}:${String(secs).padStart(2, "0")},${String(millis).padStart(3, "0")}`;
 }
 
 function formatVttTime(seconds: number): string {
@@ -75,7 +88,10 @@ function formatVttTime(seconds: number): string {
   const minutes = Math.floor((safe % 3600) / 60);
   const secs = Math.floor(safe % 60);
   const millis = Math.floor((safe - Math.floor(safe)) * 1000);
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+    2,
+    "0"
+  )}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
 function toTimestampedTxt(segments: TranscriptSegment[]): string {
@@ -158,16 +174,134 @@ function splitLongTextIntoParagraphs(text: string, maxChars = 220): string[] {
   return chunks;
 }
 
+function normalizeKieLanguage(raw?: string): string {
+  const value = (raw || "").trim().toLowerCase();
+  if (!value) return "en";
+  if (value.startsWith("en")) return "en";
+  return value;
+}
+
+function buildKieTranscriptContent(
+  directPayload: TikTokDirectLinkPayload,
+  infoPayload: TikTokInfoPayload
+): TikTokContentPayload | null {
+  const kie = directPayload.kie;
+  if (!kie || !kie.submitted || kie.state !== "success") {
+    return null;
+  }
+
+  const resultObject =
+    (kie.result as { resultObject?: { language_code?: string } } | undefined)
+      ?.resultObject || {};
+  const transcriptText = String(kie.transcript_text || "").trim();
+  if (!transcriptText) {
+    return null;
+  }
+
+  const segments: TranscriptSegment[] = [
+    { start: 0, end: 0, text: transcriptText },
+  ];
+  return {
+    ok: true,
+    platform: "tiktok",
+    lang_used: normalizeKieLanguage(resultObject.language_code),
+    source: "asr",
+    asr_provider: "none",
+    transcript_available: true,
+    asr_error: null,
+    asr_trace: kie.result,
+    debug_steps: [],
+    video: {
+      id: directPayload.video.id || infoPayload.video.id,
+      title: directPayload.video.title || infoPayload.video.title,
+      thumbnail: directPayload.video.thumbnail || infoPayload.video.thumbnail,
+      duration: directPayload.video.duration || infoPayload.video.duration,
+      uploader: directPayload.video.uploader || infoPayload.video.uploader,
+      webpage_url:
+        directPayload.video.webpage_url || infoPayload.video.webpage_url,
+      direct_media_url:
+        directPayload.direct_link?.recommended_url ||
+        infoPayload.video.direct_media_url,
+      direct_media_expires_at:
+        directPayload.direct_link?.direct_media_expires_at ||
+        infoPayload.video.direct_media_expires_at,
+      direct_media_source:
+        directPayload.direct_link?.direct_media_source ||
+        infoPayload.video.direct_media_source,
+      worker_media_url:
+        directPayload.direct_link?.worker_media_url ||
+        infoPayload.video.worker_media_url,
+    },
+    content: {
+      segments,
+      full_text: transcriptText,
+      line_count: 1,
+      char_count: transcriptText.length,
+    },
+  };
+}
+
+function getKieErrorMessage(payload: TikTokDirectLinkPayload): string {
+  const kie = payload.kie;
+  const details = kie?.error?.details as
+    | {
+        code?: number;
+        msg?: string;
+        details?: { msg?: string; payload?: { msg?: string; code?: number } };
+        payload?: { msg?: string; code?: number };
+      }
+    | undefined;
+  const code =
+    Number(details?.code) ||
+    Number(details?.details?.payload?.code) ||
+    Number((details?.payload as { code?: number } | undefined)?.code) ||
+    0;
+  if (code === 402) {
+    return "Credits insufficient. Please top up and retry.";
+  }
+  const nestedMessage =
+    details?.msg ||
+    details?.details?.msg ||
+    details?.payload?.msg ||
+    details?.details?.payload?.msg;
+  if (nestedMessage && nestedMessage.trim()) {
+    return "Transcription failed. Please retry later.";
+  }
+  const detailMessage = kie?.error?.message;
+  if (detailMessage) {
+    return "Transcription failed. Please retry later.";
+  }
+  if (kie?.state && kie.state !== "success") {
+    return "Transcription is still processing. Please retry.";
+  }
+  return "Transcription is not available for this video right now.";
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 export default function TikTokTranscriptTool() {
+  const { user } = useAuth();
   const [url, setUrl] = useState("");
   const [submittedUrl, setSubmittedUrl] = useState("");
   const [selectedLang, setSelectedLang] = useState("en");
   const [info, setInfo] = useState<TikTokInfoPayload | null>(null);
   const [content, setContent] = useState<TikTokContentPayload | null>(null);
+  const [directLink, setDirectLink] = useState<TikTokDirectLinkPayload | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const [thumbnailLoadFailed, setThumbnailLoadFailed] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [pendingAutoRetryUrl, setPendingAutoRetryUrl] = useState("");
+  const [isAutoRetryingAfterLogin, setIsAutoRetryingAfterLogin] =
+    useState(false);
+  const [errorCode, setErrorCode] = useState("");
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
@@ -177,46 +311,28 @@ export default function TikTokTranscriptTool() {
   const urlInputRef = useRef<HTMLInputElement | null>(null);
   const autoStartedUrlRef = useRef("");
 
-  const isBusy = isSubmitting || isLoadingContent;
+  const isBusy = isSubmitting;
   const canSubmit = !isBusy;
 
-  async function loadContent(targetUrl: string, lang: string) {
-    setIsLoadingContent(true);
-    setErrorMessage("");
-    try {
-      const payload = await getTikTokTranscriptContent(targetUrl, lang);
-      setSelectedLang(payload.lang_used || lang);
-      setContent(payload);
-      return payload;
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Failed to load transcript content.";
-      setErrorMessage(message);
-      setContent(null);
-      return null;
-    } finally {
-      setIsLoadingContent(false);
-    }
-  }
-
   async function submitUrl(nextUrl: string) {
+    const cleanUrl = nextUrl.trim();
     const inputError = validateTikTokUrl(nextUrl);
     if (inputError) {
+      setErrorCode("INVALID_URL");
       setErrorMessage(inputError);
       return;
     }
 
     setIsSubmitting(true);
     setErrorMessage("");
+    setErrorCode("");
     setInfo(null);
     setContent(null);
+    setDirectLink(null);
     setLoadingStepIndex(0);
     setLoadingSeconds(0);
 
     try {
-      const cleanUrl = nextUrl.trim();
       const infoPayload = await getTikTokTranscriptInfo(cleanUrl, "en");
       setLoadingStepIndex(1);
       setInfo(infoPayload);
@@ -227,10 +343,49 @@ export default function TikTokTranscriptTool() {
         infoPayload.subtitle.languages[0]?.code ||
         "en";
       setSelectedLang(initialLang);
+
       setLoadingStepIndex(2);
-      await loadContent(cleanUrl, initialLang);
+      let latestPayload = await getTikTokDirectLink(cleanUrl);
+      setDirectLink(latestPayload);
+      let kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
+
+      for (
+        let round = 0;
+        !kieContent && round < KIE_POLL_MAX_ROUNDS;
+        round += 1
+      ) {
+        const kie = latestPayload.kie;
+        if (kie?.state === "fail" || kie?.submitted === false) {
+          break;
+        }
+        setLoadingStepIndex(3);
+        await sleep(KIE_POLL_INTERVAL_MS);
+        latestPayload = await getTikTokDirectLink(cleanUrl);
+        setDirectLink(latestPayload);
+        kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
+      }
+
+      if (!kieContent) {
+        setContent(null);
+        setErrorCode("");
+        setErrorMessage(getKieErrorMessage(latestPayload));
+        return;
+      }
+      setSelectedLang(kieContent.lang_used || initialLang);
+      setContent(kieContent);
       setLoadingStepIndex(3);
     } catch (error) {
+      if (error instanceof TikTokTranscriptApiError) {
+        setErrorCode(error.code || "");
+        if (error.code === "LOGIN_REQUIRED") {
+          setIsLoginModalOpen(true);
+          if (!user && cleanUrl) {
+            setPendingAutoRetryUrl(cleanUrl);
+          }
+        }
+      } else {
+        setErrorCode("");
+      }
       const message =
         error instanceof Error
           ? error.message
@@ -241,6 +396,26 @@ export default function TikTokTranscriptTool() {
     }
   }
 
+  useEffect(() => {
+    if (
+      !user ||
+      !pendingAutoRetryUrl ||
+      isSubmitting ||
+      isAutoRetryingAfterLogin
+    ) {
+      return;
+    }
+    const retryUrl = pendingAutoRetryUrl;
+    setPendingAutoRetryUrl("");
+    setIsAutoRetryingAfterLogin(true);
+    setIsLoginModalOpen(false);
+    setErrorMessage("");
+    setErrorCode("");
+    void submitUrl(retryUrl).finally(() => {
+      setIsAutoRetryingAfterLogin(false);
+    });
+  }, [user, pendingAutoRetryUrl, isSubmitting, isAutoRetryingAfterLogin]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await submitUrl(url);
@@ -248,18 +423,6 @@ export default function TikTokTranscriptTool() {
 
   async function handleLanguageChange(nextLang: string) {
     setSelectedLang(nextLang);
-    if (!submittedUrl) {
-      return;
-    }
-    await loadContent(submittedUrl, nextLang);
-  }
-
-  async function handleRetryContent() {
-    if (!submittedUrl) {
-      urlInputRef.current?.focus();
-      return;
-    }
-    await loadContent(submittedUrl, selectedLang || "en");
   }
 
   const normalizedSegments = useMemo<TranscriptSegment[]>(() => {
@@ -338,7 +501,11 @@ export default function TikTokTranscriptTool() {
     }
   }
 
-  function triggerDownload(fileName: string, contentText: string, mimeType: string) {
+  function triggerDownload(
+    fileName: string,
+    contentText: string,
+    mimeType: string
+  ) {
     const blob = new Blob([contentText], { type: mimeType });
     const blobUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -355,7 +522,9 @@ export default function TikTokTranscriptTool() {
       return;
     }
 
-    const baseName = sanitizeFileName(content.video?.title || "tiktok_transcript");
+    const baseName = sanitizeFileName(
+      content.video?.title || "tiktok_transcript"
+    );
     const lang = content.lang_used || selectedLang || "en";
 
     if (type === "srt") {
@@ -413,7 +582,10 @@ export default function TikTokTranscriptTool() {
     if (!errorMessage) {
       return;
     }
-    errorCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    errorCardRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
   }, [errorMessage]);
 
   useEffect(() => {
@@ -438,19 +610,34 @@ export default function TikTokTranscriptTool() {
   }, []);
 
   const thumbnailUrl = info?.video.thumbnail || content?.video?.thumbnail || "";
-  const workerMediaUrl =
-    info?.video.worker_media_url || content?.video?.worker_media_url || "";
+  const thumbnailProxyUrl = thumbnailUrl
+    ? `/api/tiktok/transcript/thumbnail?url=${encodeURIComponent(thumbnailUrl)}`
+    : "";
+  const directLinkRecommendedUrl =
+    directLink?.direct_link?.recommended_url || "";
   const directMediaUrl =
-    info?.video.direct_media_url || content?.video?.direct_media_url || "";
-  const effectiveMediaUrl = workerMediaUrl || directMediaUrl;
+    directLinkRecommendedUrl ||
+    info?.video.direct_media_url ||
+    content?.video?.direct_media_url ||
+    "";
+  const effectiveMediaUrl = directMediaUrl;
+  const downloadSourceUrl = directMediaUrl;
   const webpageUrl =
-    info?.video.webpage_url || content?.video?.webpage_url || submittedUrl || "";
+    info?.video.webpage_url ||
+    content?.video?.webpage_url ||
+    submittedUrl ||
+    "";
   const directMediaExpiresAt =
+    directLink?.direct_link?.direct_media_expires_at ||
     info?.video.direct_media_expires_at ||
     content?.video?.direct_media_expires_at ||
     null;
   const directMediaSource =
-    info?.video.direct_media_source || content?.video?.direct_media_source || "";
+    directLink?.source ||
+    directLink?.direct_link?.direct_media_source ||
+    info?.video.direct_media_source ||
+    content?.video?.direct_media_source ||
+    "";
   const effectiveMediaHost = useMemo(() => {
     if (!effectiveMediaUrl) {
       return "";
@@ -461,12 +648,17 @@ export default function TikTokTranscriptTool() {
       return "";
     }
   }, [effectiveMediaUrl]);
+  const kieState = String(directLink?.kie?.state || "").toLowerCase();
+  const kieSubmitted = directLink?.kie?.submitted === true;
+  const kiePending =
+    kieSubmitted &&
+    !!kieState &&
+    kieState !== "success" &&
+    kieState !== "fail";
   const sourceLabel =
-    content?.source === "raw"
-      ? "Built-in subtitles"
-      : content?.source === "audio_extracted"
-        ? "Audio extracted"
-        : "AI transcription";
+    directLink?.kie?.state === "success"
+      ? "Transcription ready"
+      : "Transcription pending";
   const loadingProgress = isBusy
     ? Math.max(
         12,
@@ -476,22 +668,15 @@ export default function TikTokTranscriptTool() {
         )
       )
     : content
-      ? 100
-      : 0;
-  const errorHint = useMemo(() => {
-    const text = errorMessage.toLowerCase();
-    if (text.includes("private") || text.includes("login")) {
-      return "Use a public TikTok video URL that can be opened without login.";
-    }
-    if (text.includes("transcribe") || text.includes("subtitle")) {
-      return "Try another video, or switch language and retry once.";
-    }
-    return "Check the URL, then retry. If it still fails, test with a different public TikTok video.";
-  }, [errorMessage]);
+    ? 100
+    : 0;
   const languageOptions =
     info?.subtitle.languages.length && info.subtitle.languages.length > 0
       ? info.subtitle.languages
       : [{ code: "en", label: "English", source: "automatic" as const }];
+  useEffect(() => {
+    setThumbnailLoadFailed(false);
+  }, [thumbnailUrl]);
   const isTranscriptUnavailable = content?.transcript_available === false;
   const isFailurePlaceholder =
     (content?.content.full_text || "").trim().toLowerCase() ===
@@ -499,9 +684,14 @@ export default function TikTokTranscriptTool() {
     (content?.content.full_text || "").trim().toLowerCase() ===
       "audio extracted successfully.";
   const loadingStatusText = isSubmitting
-    ? "Fetching video metadata and available tracks..."
-    : "Generating transcript content...";
-  const shouldLimitPreviewHeight = previewSegments.length > 6 || previewText.length > 1500;
+    ? "Fetching metadata and generating transcript..."
+    : "Transcript ready";
+  const shouldLimitPreviewHeight =
+    previewSegments.length > 6 || previewText.length > 1500;
+  const showPreviewLoading =
+    (isSubmitting || kiePending) &&
+    previewSegments.length === 0 &&
+    !errorMessage;
   const transcriptReady =
     !isBusy &&
     !!content &&
@@ -510,11 +700,12 @@ export default function TikTokTranscriptTool() {
     previewSegments.length > 0 &&
     (content.content.char_count || 0) > 0;
   const directLinkLikelyBrowserBlocked =
-    !workerMediaUrl && effectiveMediaHost.includes("webapp-prime");
-  const canDownloadSourceVideo = !!effectiveMediaUrl && transcriptReady;
+    effectiveMediaHost.includes("webapp-prime");
+  const canDownloadSourceVideo = !!downloadSourceUrl;
 
   return (
-    <div className="w-full max-w-6xl">
+    <>
+      <div className="w-full max-w-6xl">
       <form className="ui-tool-form mb-4 w-full" onSubmit={handleSubmit}>
         <div className="ui-input-shell rounded-2xl border-cyan-300/60 bg-gradient-to-br from-white to-cyan-50/40 p-2.5 dark:border-cyan-900/50 dark:from-zinc-950 dark:to-cyan-950/20">
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -549,7 +740,9 @@ export default function TikTokTranscriptTool() {
       </form>
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-app-border bg-app-surface px-3 py-2.5 text-xs text-app-text-muted">
-        <span className="font-medium">Paste once and we handle fetch + transcription automatically.</span>
+        <span className="font-medium">
+          Paste once and we handle fetch + transcription automatically.
+        </span>
         <button
           type="button"
           onClick={() => setUrl(EXAMPLE_TIKTOK_URL)}
@@ -590,7 +783,20 @@ export default function TikTokTranscriptTool() {
               <p className="text-[11px] font-bold uppercase tracking-wide text-rose-700/90 dark:text-rose-300/90">
                 Processing failed
               </p>
-              <p className="mt-1 text-sm font-semibold leading-relaxed">{errorMessage}</p>
+              <p className="mt-1 text-sm font-semibold leading-relaxed">
+                {errorMessage}
+              </p>
+              {errorCode === "INSUFFICIENT_CREDITS" ? (
+                <div className="mt-3">
+                  <a
+                    href="/billing"
+                    className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold"
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Top up credits
+                  </a>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -604,22 +810,28 @@ export default function TikTokTranscriptTool() {
           <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
             <aside className="space-y-3">
               <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
-                {thumbnailUrl ? (
-                  <img
-                    src={thumbnailUrl}
+                {thumbnailProxyUrl && !thumbnailLoadFailed ? (
+                  <Image
+                    src={thumbnailProxyUrl}
                     alt={info.video.title || "TikTok thumbnail"}
+                    width={540}
+                    height={960}
+                    unoptimized
                     className="aspect-[9/16] w-full object-cover"
-                    loading="lazy"
+                    onError={() => setThumbnailLoadFailed(true)}
                   />
                 ) : (
                   <div className="flex aspect-[9/16] w-full items-center justify-center text-app-text-muted">
-                    <Music2 className="h-6 w-6" />
+                    <TikTokIcon className="h-6 w-6" />
                   </div>
                 )}
               </div>
               <div className="space-y-2 rounded-xl border border-app-border bg-app-bg px-3 py-3 text-[11px] text-app-text-muted">
                 <div className="rounded-md bg-app-surface px-2 py-1.5">
-                  Source: <span className="font-semibold text-app-text">{sourceLabel}</span>
+                  Source:{" "}
+                  <span className="font-semibold text-app-text">
+                    {sourceLabel}
+                  </span>
                 </div>
                 {webpageUrl ? (
                   <a
@@ -631,9 +843,9 @@ export default function TikTokTranscriptTool() {
                     Open TikTok Page
                   </a>
                 ) : null}
-                {effectiveMediaUrl && canDownloadSourceVideo ? (
+                {downloadSourceUrl && canDownloadSourceVideo ? (
                   <a
-                    href={effectiveMediaUrl}
+                    href={downloadSourceUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="ui-btn-primary inline-flex h-8 w-full items-center justify-center rounded-md px-2 text-[11px] font-bold"
@@ -641,7 +853,7 @@ export default function TikTokTranscriptTool() {
                     Download Source Video
                   </a>
                 ) : null}
-                {effectiveMediaUrl && !canDownloadSourceVideo ? (
+                {downloadSourceUrl && !canDownloadSourceVideo ? (
                   <button
                     type="button"
                     disabled
@@ -652,26 +864,9 @@ export default function TikTokTranscriptTool() {
                 ) : null}
                 {directLinkLikelyBrowserBlocked ? (
                   <p className="rounded-md border border-amber-300/70 bg-amber-50 px-2 py-1.5 text-[10px] leading-relaxed text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">
-                    This direct URL may fail in browser due TikTok anti-hotlink policy.
+                    This direct URL may fail in browser due TikTok anti-hotlink
+                    policy.
                   </p>
-                ) : null}
-                {(directMediaExpiresAt || effectiveMediaHost) ? (
-                  <details className="rounded-md border border-app-border bg-app-surface px-2 py-1.5">
-                    <summary className="cursor-pointer font-semibold text-app-text">
-                      Direct link details
-                    </summary>
-                    {directMediaExpiresAt ? (
-                      <p className="mt-1 text-[10px] leading-relaxed text-app-text-muted">
-                        Expires at unix time: {directMediaExpiresAt}
-                      </p>
-                    ) : null}
-                    {effectiveMediaHost ? (
-                      <p className="mt-1 text-[10px] leading-relaxed text-app-text-muted">
-                        Host: {effectiveMediaHost}
-                        {directMediaSource ? ` (${directMediaSource})` : ""}
-                      </p>
-                    ) : null}
-                  </details>
                 ) : null}
               </div>
             </aside>
@@ -680,14 +875,15 @@ export default function TikTokTranscriptTool() {
               <div className="mb-5 rounded-xl border border-app-border bg-app-bg/70 p-3">
                 <div className="mb-1.5 flex items-center gap-2">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-black text-white">
-                    <Music2 className="h-5 w-5" />
+                    <TikTokIcon className="h-5 w-5" />
                   </div>
                   <h3 className="line-clamp-2 text-xl font-bold leading-tight text-app-text sm:text-[1.65rem]">
                     {info.video.title || "TikTok Transcript"}
                   </h3>
                 </div>
                 <p className="text-sm font-medium text-app-text-muted">
-                  Auto-detected language: {content?.lang_used || selectedLang || "en"}
+                  Auto-detected language:{" "}
+                  {content?.lang_used || selectedLang || "en"}
                 </p>
               </div>
 
@@ -696,12 +892,17 @@ export default function TikTokTranscriptTool() {
                   <Languages className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-app-text-muted" />
                   <select
                     value={selectedLang}
-                    onChange={(event) => void handleLanguageChange(event.target.value)}
+                    onChange={(event) =>
+                      void handleLanguageChange(event.target.value)
+                    }
                     disabled={isBusy}
                     className="h-9 rounded-md border border-app-border bg-app-surface pl-7 pr-2 text-xs font-semibold text-app-text outline-none transition-colors hover:border-app-text-muted/50 focus:border-cyan-500 disabled:opacity-60"
                   >
                     {languageOptions.map((item) => (
-                      <option key={`${item.code}-${item.source}`} value={item.code}>
+                      <option
+                        key={`${item.code}-${item.source}`}
+                        value={item.code}
+                      >
                         {item.label}
                       </option>
                     ))}
@@ -711,7 +912,9 @@ export default function TikTokTranscriptTool() {
                 <button
                   type="button"
                   onClick={() => setShowTimestamps((prev) => !prev)}
-                  disabled={isBusy || !transcriptReady || !hasReliableTimestamps}
+                  disabled={
+                    isBusy || !transcriptReady || !hasReliableTimestamps
+                  }
                   className="inline-flex h-9 items-center rounded-md border border-app-border bg-app-surface px-3 text-xs font-semibold text-app-text transition-colors hover:bg-app-bg disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {hasReliableTimestamps
@@ -727,7 +930,11 @@ export default function TikTokTranscriptTool() {
                   disabled={!transcriptReady || !previewText}
                   className="ui-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
                   {copied ? "Copied" : "Copy transcript"}
                 </button>
               </div>
@@ -778,22 +985,16 @@ export default function TikTokTranscriptTool() {
 
               <div className="rounded-xl border border-app-border bg-app-bg/60 p-3">
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-text-muted">
-                  Preview - {content?.content.line_count || 0} lines - {content?.content.char_count || 0} chars
+                  Preview - {content?.content.line_count || 0} lines -{" "}
+                  {content?.content.char_count || 0} chars
                 </p>
                 {isParagraphMode ? (
                   <div className="mb-3 rounded-lg border border-cyan-200/70 bg-cyan-50 px-3 py-2 text-xs font-medium text-cyan-800 dark:border-cyan-800/60 dark:bg-cyan-950/35 dark:text-cyan-100">
-                    Native timestamps are unavailable for this transcript. We switched to readable paragraph mode.
+                    Native timestamps are unavailable for this transcript. We
+                    switched to readable paragraph mode.
                   </div>
                 ) : null}
                 <div className="relative min-h-[180px]">
-                  {isLoadingContent ? (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg border border-cyan-200/70 bg-cyan-50/80 backdrop-blur-[1px] dark:border-cyan-800/60 dark:bg-cyan-950/45">
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-200">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Updating transcript...
-                      </span>
-                    </div>
-                  ) : null}
                   <div
                     className={`space-y-2.5 ${
                       shouldLimitPreviewHeight
@@ -803,14 +1004,18 @@ export default function TikTokTranscriptTool() {
                   >
                     {isTranscriptUnavailable && isFailurePlaceholder ? (
                       <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-base text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">
-                        No usable subtitles were generated for this video yet. Click <span className="font-bold">Refresh</span> to retry.
+                        No usable subtitles were generated for this video yet.
+                        Click <span className="font-bold">Refresh</span> to
+                        retry.
                       </div>
                     ) : previewSegments.length > 0 ? (
                       previewSegments.map((segment, idx) => (
                         <div
                           key={`${segment.start}-${idx}`}
                           className={`grid items-start gap-2.5 ${
-                            showTimestampInPreview ? "grid-cols-[86px_minmax(0,1fr)]" : "grid-cols-1"
+                            showTimestampInPreview
+                              ? "grid-cols-[86px_minmax(0,1fr)]"
+                              : "grid-cols-1"
                           }`}
                         >
                           {showTimestampInPreview ? (
@@ -823,18 +1028,17 @@ export default function TikTokTranscriptTool() {
                           </div>
                         </div>
                       ))
+                    ) : showPreviewLoading ? (
+                      <div className="rounded-lg border border-cyan-200/70 bg-cyan-50/80 px-4 py-3 text-base text-cyan-800 dark:border-cyan-800/60 dark:bg-cyan-950/35 dark:text-cyan-200">
+                        <span className="inline-flex items-center gap-2 font-semibold">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Transcription in progress, please wait...
+                        </span>
+                      </div>
                     ) : (
-                      <>
-                        {isLoadingContent ? (
-                          <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-transparent select-none">
-                            Preparing transcript...
-                          </div>
-                        ) : (
-                          <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-app-text-muted">
-                            No transcript preview available.
-                          </div>
-                        )}
-                      </>
+                      <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-base text-app-text-muted">
+                        No transcript preview available.
+                      </div>
                     )}
                   </div>
                 </div>
@@ -850,6 +1054,13 @@ export default function TikTokTranscriptTool() {
           </div>
         </div>
       ) : null}
-    </div>
+      </div>
+      {isLoginModalOpen ? (
+        <GoogleLoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+        />
+      ) : null}
+    </>
   );
 }

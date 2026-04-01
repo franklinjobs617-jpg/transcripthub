@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Zap, Mail, MessageSquare } from "lucide-react";
+import { Mail, MessageSquare } from "lucide-react";
 
 export function SiteFooter() {
     const currentYear = new Date().getFullYear();
@@ -14,9 +15,14 @@ export function SiteFooter() {
                     {/* Column 1: Brand & SEO Pitch */}
                     <div className="col-span-2 lg:col-span-2">
                         <Link href="/" className="flex items-center gap-2.5 mb-6">
-                            <div className="h-8 w-8 bg-app-primary rounded-lg flex items-center justify-center text-app-primary-foreground shadow-sm">
-                                <Zap className="h-4 w-4" />
-                            </div>
+                            <Image
+                                src="/icon.png?v=20260401b"
+                                alt="Transcripthub logo"
+                                width={40}
+                                height={40}
+                                unoptimized
+                                className="h-10 w-10 object-contain"
+                            />
                             <span className="font-bold text-xl tracking-tight">Transcripthub</span>
                         </Link>
                         <p className="text-sm text-app-text-muted leading-relaxed max-w-sm mb-6">
@@ -103,10 +109,6 @@ export function SiteFooter() {
 
                 {/* Footer Bottom */}
                 <div className="pt-12 border-t border-app-border flex flex-col items-center">
-                    <p className="text-[11px] font-bold text-app-text-muted/60 text-center uppercase tracking-widest leading-loose mb-6 max-w-3xl">
-                        Not affiliated with, endorsed, or sponsored by Instagram, Meta, TikTok, or ByteDance.
-                        All logos and trademarks referenced across this site belong to their respective owners.
-                    </p>
                     <div className="text-xs text-app-text-muted/40 font-medium">
                         © {currentYear} Transcripthub Inc. All rights reserved.
                     </div>

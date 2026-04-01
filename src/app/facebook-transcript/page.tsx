@@ -35,9 +35,9 @@ const FacebookIcon = ({ className }: { className?: string }) => (
 );
 
 export const metadata: Metadata = {
-  title: "Facebook Transcript Generator - Video to Text for FB",
+  title: "Facebook Transcript Generator & Video to Text Tool",
   description:
-    "Fast and accurate AI-powered Facebook video transcription. Convert FB video to script for repurposing.",
+    "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
   keywords: [
     "facebook transcript",
     "facebook transcript generator",
@@ -51,18 +51,25 @@ export const metadata: Metadata = {
     canonical: "/facebook-transcript",
   },
   openGraph: {
-    title: "Facebook Transcript Generator - Video to Text for FB",
+    title: "Facebook Transcript Generator & Video to Text Tool",
     description:
-      "Fast and accurate AI-powered Facebook video transcription. Convert FB video to script for repurposing.",
-    url: "https://transcripthub.com/facebook-transcript",
+      "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
+    url: "/facebook-transcript",
     siteName: "Transcripthub",
     type: "website",
+    images: [
+      {
+        url: "/captures/facebook-20260329.png",
+        alt: "Facebook transcript generator preview on Transcripthub",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Facebook Transcript Generator - Video to Text for FB",
+    title: "Facebook Transcript Generator & Video to Text Tool",
     description:
-      "Fast and accurate AI-powered Facebook video transcription. Convert FB video to script for repurposing.",
+      "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
+    images: ["/captures/facebook-20260329.png"],
   },
 };
 

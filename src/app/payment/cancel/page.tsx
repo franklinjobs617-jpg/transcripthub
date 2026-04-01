@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Payment Canceled - Transcripthub",
+  description: "Payment was canceled. Return to pricing to retry checkout anytime.",
+  alternates: {
+    canonical: "/payment/cancel",
+  },
+};
 
 export default function PaymentCancelPage() {
   return (

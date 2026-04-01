@@ -20,9 +20,9 @@ import TikTokTranscriptTool from "@/components/pages/tiktok-transcript-tool";
 import { RealImageCard } from "@/components/shared/real-image-card";
 
 export const metadata: Metadata = {
-  title: "TikTok Transcript Generator - TikTok Video Transcription & Script Tool",
+  title: "TikTok Transcript Generator & Video Transcription Tool",
   description:
-    "Use TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and export.",
+    "Use our TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and subtitle export.",
   keywords: [
     "tiktok transcript",
     "tiktok transcript generator",
@@ -36,18 +36,25 @@ export const metadata: Metadata = {
     canonical: "/tiktok-transcript",
   },
   openGraph: {
-    title: "TikTok Transcript Generator - TikTok Video Transcription & Script Tool",
+    title: "TikTok Transcript Generator & Video Transcription Tool",
     description:
-      "Use TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and export.",
-    url: "https://transcripthub.com/tiktok-transcript",
+      "Use our TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and subtitle export.",
+    url: "/tiktok-transcript",
     siteName: "Transcripthub",
     type: "website",
+    images: [
+      {
+        url: "/captures/tiktok-20260329.png",
+        alt: "TikTok transcript generator preview on Transcripthub",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TikTok Transcript Generator - TikTok Video Transcription & Script Tool",
+    title: "TikTok Transcript Generator & Video Transcription Tool",
     description:
-      "Use TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and export.",
+      "Use our TikTok Transcript Generator for fast TikTok Video Transcription and clean TikTok Script output for captions, repurposing, and subtitle export.",
+    images: ["/captures/tiktok-20260329.png"],
   },
 };
 

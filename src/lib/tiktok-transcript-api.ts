@@ -11,6 +11,26 @@ type ErrorPayload = {
   error: TikTokApiError;
 };
 
+type TranscriptApiErrorInit = {
+  code?: string;
+  status?: number;
+  details?: unknown;
+};
+
+export class TikTokTranscriptApiError extends Error {
+  readonly code?: string;
+  readonly status?: number;
+  readonly details?: unknown;
+
+  constructor(message: string, init: TranscriptApiErrorInit = {}) {
+    super(message);
+    this.name = "TikTokTranscriptApiError";
+    this.code = init.code;
+    this.status = init.status;
+    this.details = init.details;
+  }
+}
+
 export type TikTokInfoPayload = {
   ok: true;
   platform: "tiktok";
@@ -93,6 +113,47 @@ export type TikTokContentPayload = {
   };
 };
 
+export type TikTokDirectLinkPayload = {
+  ok: true;
+  platform: "tiktok";
+  source: "tiktok_app_feed_api" | "transcript_service_fallback";
+  video: {
+    id?: string;
+    title?: string;
+    thumbnail?: string;
+    duration?: number;
+    uploader?: string;
+    webpage_url?: string;
+  };
+  direct_link: {
+    recommended_url?: string;
+    hq_url?: string;
+    audio_url?: string;
+    audio_only_url?: string;
+    play_url?: string;
+    download_url?: string;
+    worker_media_url?: string;
+    direct_media_source?: string;
+    direct_media_expires_at?: number;
+  };
+  fla_ai_input_url?: string;
+  kie?: {
+    enabled?: boolean;
+    submitted?: boolean;
+    task_id?: string;
+    record_id?: string;
+    state?: string;
+    transcript_text?: string;
+    result?: unknown;
+    error?: {
+      code?: string;
+      message?: string;
+      details?: unknown;
+    };
+  };
+  debug?: Record<string, unknown>;
+};
+
 function toFriendlyMessage(code?: string, fallback?: string): string {
   const map: Record<string, string> = {
     INVALID_URL: "Please paste a valid TikTok video link.",
@@ -107,7 +168,9 @@ function toFriendlyMessage(code?: string, fallback?: string): string {
     ASR_MEDIA_TOO_LARGE: "This video is too long for instant transcription. Please try a shorter clip.",
     ASR_NOT_CONFIGURED: "Transcription service is temporarily unavailable. Please try again soon.",
     ASR_FAILED: "We couldn't transcribe this video this time. Please retry or try a shorter clip.",
+    LOGIN_REQUIRED: "Free daily limit reached. Please sign in to continue.",
     INSUFFICIENT_CREDITS: "Your credits are currently insufficient. Please top up and try again.",
+    RATE_LIMITED: "Too many requests right now. Please wait a moment and retry.",
     PERMISSION_DENIED: "Your account does not have permission for this action right now.",
     ENTITLEMENT_REQUIRED: "Please upgrade your plan or top up credits to continue.",
     INTERNAL_ERROR: "Something went wrong. Please try again.",
@@ -126,7 +189,11 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
     const errorData = data as ErrorPayload;
     const code = errorData?.error?.code;
     const message = toFriendlyMessage(code, errorData?.error?.message);
-    throw new Error(message);
+    throw new TikTokTranscriptApiError(message, {
+      code,
+      status: response.status,
+      details: errorData?.error?.details,
+    });
   }
 
   return data as T;
@@ -164,6 +231,22 @@ export async function getTikTokTranscriptContent(url: string, lang?: string) {
   });
 
   return parseJsonResponse<TikTokContentPayload>(response);
+}
+
+export async function getTikTokDirectLink(url: string) {
+  const token = getStoredAuthToken();
+  const response = await fetch("/api/tiktok/transcript/direct-link", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      url,
+    }),
+  });
+
+  return parseJsonResponse<TikTokDirectLinkPayload>(response);
 }
 
 export function buildTikTokDownloadUrl(url: string, lang: string, type: "srt" | "txt" | "vtt") {

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Manage your profile details and account preferences for Transcripthub.",
   robots: {
     index: false,
-    follow: true,
+    follow: false,
   },
   alternates: {
     canonical: "/settings",

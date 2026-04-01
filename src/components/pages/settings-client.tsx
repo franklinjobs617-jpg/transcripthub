@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import {
   CheckCircle2,
@@ -35,6 +36,7 @@ export function SettingsClient() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isSignedIn = Boolean(user?.email);
+  const avatarUrl = user?.picture || user?.avatarUrl || "";
   const title = isSignedIn ? "Account settings" : "Account settings";
   const description = isSignedIn
     ? "Manage profile details, plan status, and account controls for your transcript workspace."
@@ -98,10 +100,13 @@ export function SettingsClient() {
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="ui-card bg-app-surface p-5 lg:col-span-2">
               <div className="flex items-start gap-4">
-                {user?.picture || user?.avatarUrl ? (
-                  <img
-                    src={user?.picture || user?.avatarUrl || ""}
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
                     alt={user?.name || "User avatar"}
+                    width={64}
+                    height={64}
+                    unoptimized
                     className="h-16 w-16 rounded-2xl border border-app-border object-cover"
                   />
                 ) : (

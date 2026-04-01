@@ -6,6 +6,9 @@ const ALLOWED_HOST_KEYWORDS = [
   "tiktokcdn",
   "muscdn",
   "bytecdn",
+  "googleusercontent",
+  "ggpht",
+  "gstatic",
 ];
 
 function isAllowedImageHost(hostname: string): boolean {

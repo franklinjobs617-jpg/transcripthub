@@ -1,28 +1,10 @@
 import { getTranscriptBackendBaseUrl } from "@/lib/transcript-backend";
-import { fetchAuthUserByToken, getBearerTokenFromHeaders } from "@/lib/auth-backend";
 
 export async function POST(request: Request) {
   try {
     const baseUrl = getTranscriptBackendBaseUrl();
     const bodyText = await request.text();
     const authHeader = request.headers.get("authorization");
-    const token = getBearerTokenFromHeaders(request.headers);
-
-    if (token) {
-      const authUser = await fetchAuthUserByToken(token);
-      if (authUser && typeof authUser.credits === "number" && authUser.credits <= 0) {
-        return Response.json(
-          {
-            ok: false,
-            error: {
-              code: "INSUFFICIENT_CREDITS",
-              message: "Your credits are currently insufficient. Please top up and retry.",
-            },
-          },
-          { status: 402 }
-        );
-      }
-    }
 
     const upstream = await fetch(`${baseUrl}/api/tiktok/transcript/content`, {
       method: "POST",

@@ -6,12 +6,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Menu,
   X,
-  Zap,
   ChevronDown,
   LogOut,
   Settings,
   CreditCard,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -67,6 +67,7 @@ export function SiteHeader({
     if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   })();
+  const avatarUrl = user?.avatarUrl || user?.picture || "";
 
   const onSignOut = () => {
     logout();
@@ -79,9 +80,15 @@ export function SiteHeader({
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-app-primary text-app-primary-foreground shadow-sm">
-              <Zap className="h-4 w-4" />
-            </div>
+            <Image
+              src="/icon.png?v=20260401b"
+              alt="Transcripthub logo"
+              width={40}
+              height={40}
+              priority
+              unoptimized
+              className="h-10 w-10 object-contain"
+            />
             <span className="text-lg font-bold tracking-tight">
               Transcripthub
             </span>
@@ -107,10 +114,13 @@ export function SiteHeader({
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
                 className="ui-btn-secondary inline-flex h-10 items-center gap-2 rounded-full px-2 pr-3 text-sm font-medium cursor-pointer"
               >
-                {user.avatarUrl || user.picture ? (
-                  <img
-                    src={user.avatarUrl || user.picture}
-                    alt={user.name}
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt={user.name || "User avatar"}
+                    width={28}
+                    height={28}
+                    unoptimized
                     className="h-7 w-7 rounded-full object-cover"
                   />
                 ) : (

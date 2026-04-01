@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { PaymentSuccessClient } from "@/components/pages/payment-success-client";
+
+export const metadata: Metadata = {
+  title: "Payment Success - Transcripthub",
+  description: "Payment completed. Verifying order status and syncing your credits.",
+  alternates: {
+    canonical: "/payment/success",
+  },
+};
 
 function VerifyingFallback() {
   return (

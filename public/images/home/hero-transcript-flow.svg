@@ -1,0 +1,130 @@
+<svg width="1400" height="980" viewBox="0 0 1400 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgA" x1="120" y1="40" x2="1210" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#090E1D"/>
+      <stop offset="0.52" stop-color="#101833"/>
+      <stop offset="1" stop-color="#121E3F"/>
+    </linearGradient>
+    <radialGradient id="glowCyan" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(310 180) rotate(28) scale(380 240)">
+      <stop stop-color="#22D3EE" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPink" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1110 770) rotate(-24) scale(420 250)">
+      <stop stop-color="#EC4899" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#EC4899" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPurple" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1080 180) rotate(22) scale(340 220)">
+      <stop stop-color="#8B5CF6" stop-opacity="0.44"/>
+      <stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glassStroke" x1="360" y1="170" x2="1090" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7DD3FC" stop-opacity="0.56"/>
+      <stop offset="0.5" stop-color="#A78BFA" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#F472B6" stop-opacity="0.46"/>
+    </linearGradient>
+    <linearGradient id="tagTikTok" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="tagInstagram" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F97316"/>
+      <stop offset="0.5" stop-color="#EC4899"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="tagFacebook" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <linearGradient id="ctaGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+    <linearGradient id="chipA" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0891B2"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="chipB" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#14B8A6"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+    <linearGradient id="chipC" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FB7185"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+    <filter id="panelShadow" x="242" y="123" width="916" height="724" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#020617" flood-opacity="0.62"/>
+    </filter>
+    <filter id="softGlow" x="0" y="0" width="1400" height="980" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="80"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="980" rx="32" fill="url(#bgA)"/>
+  <rect width="1400" height="980" rx="32" fill="url(#glowCyan)"/>
+  <rect width="1400" height="980" rx="32" fill="url(#glowPurple)"/>
+  <rect width="1400" height="980" rx="32" fill="url(#glowPink)"/>
+
+  <g opacity="0.2">
+    <path d="M80 120H1320" stroke="#94A3B8" stroke-opacity="0.45"/>
+    <path d="M80 220H1320" stroke="#94A3B8" stroke-opacity="0.32"/>
+    <path d="M80 320H1320" stroke="#94A3B8" stroke-opacity="0.3"/>
+    <path d="M80 420H1320" stroke="#94A3B8" stroke-opacity="0.28"/>
+    <path d="M80 520H1320" stroke="#94A3B8" stroke-opacity="0.25"/>
+    <path d="M80 620H1320" stroke="#94A3B8" stroke-opacity="0.22"/>
+    <path d="M80 720H1320" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M80 820H1320" stroke="#94A3B8" stroke-opacity="0.18"/>
+    <path d="M180 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M320 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M460 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M600 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M740 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M880 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M1020 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+    <path d="M1160 60V920" stroke="#94A3B8" stroke-opacity="0.2"/>
+  </g>
+
+  <g filter="url(#panelShadow)">
+    <rect x="290" y="170" width="820" height="630" rx="34" fill="#0B1228" fill-opacity="0.78"/>
+    <rect x="290.75" y="170.75" width="818.5" height="628.5" rx="33.25" stroke="url(#glassStroke)" stroke-opacity="0.72" stroke-width="1.5"/>
+  </g>
+
+  <rect x="344" y="226" width="420" height="20" rx="10" fill="#334155"/>
+  <rect x="344" y="258" width="286" height="12" rx="6" fill="#475569"/>
+
+  <rect x="344" y="306" width="230" height="72" rx="16" fill="url(#tagTikTok)"/>
+  <circle cx="380" cy="342" r="14" fill="#111827"/>
+  <path d="M376 345C376 339.477 380.477 335 386 335V348C380.477 348 376 343.523 376 338V345Z" fill="#22D3EE"/>
+  <rect x="404" y="334" width="142" height="8" rx="4" fill="#94A3B8"/>
+  <rect x="404" y="350" width="120" height="8" rx="4" fill="#64748B"/>
+
+  <rect x="594" y="306" width="230" height="72" rx="16" fill="url(#tagInstagram)"/>
+  <rect x="632" y="334" width="160" height="8" rx="4" fill="white" fill-opacity="0.82"/>
+  <rect x="632" y="350" width="130" height="8" rx="4" fill="white" fill-opacity="0.55"/>
+
+  <rect x="844" y="306" width="212" height="72" rx="16" fill="url(#tagFacebook)"/>
+  <rect x="880" y="334" width="144" height="8" rx="4" fill="white" fill-opacity="0.83"/>
+  <rect x="880" y="350" width="118" height="8" rx="4" fill="white" fill-opacity="0.58"/>
+
+  <rect x="344" y="412" width="712" height="122" rx="18" fill="#111D3D" stroke="#334155"/>
+  <rect x="374" y="438" width="134" height="16" rx="8" fill="url(#chipA)"/>
+  <rect x="522" y="438" width="148" height="16" rx="8" fill="url(#chipB)"/>
+  <rect x="684" y="438" width="164" height="16" rx="8" fill="url(#chipC)"/>
+  <rect x="374" y="468" width="650" height="10" rx="5" fill="#475569"/>
+  <rect x="374" y="488" width="524" height="10" rx="5" fill="#334155"/>
+
+  <rect x="344" y="566" width="330" height="74" rx="16" fill="url(#ctaGrad)"/>
+  <rect x="694" y="566" width="168" height="74" rx="16" fill="#0F172A" stroke="#334155"/>
+  <rect x="878" y="566" width="178" height="74" rx="16" fill="#111827" stroke="#334155"/>
+
+  <rect x="344" y="666" width="712" height="84" rx="16" fill="#0A142D" stroke="#334155"/>
+  <rect x="372" y="699" width="178" height="14" rx="7" fill="#334155"/>
+  <rect x="568" y="699" width="166" height="14" rx="7" fill="#334155"/>
+  <rect x="752" y="699" width="152" height="14" rx="7" fill="#334155"/>
+  <rect x="922" y="693" width="106" height="26" rx="10" fill="#22D3EE"/>
+
+  <g opacity="0.9">
+    <circle cx="256" cy="238" r="8" fill="#22D3EE"/>
+    <circle cx="230" cy="238" r="8" fill="#A78BFA"/>
+    <circle cx="204" cy="238" r="8" fill="#F472B6"/>
+  </g>
+</svg>

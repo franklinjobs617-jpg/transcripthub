@@ -5,11 +5,23 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { LoginSuccessToast } from "@/components/auth/login-success-toast";
+import { getSiteUrl } from "@/lib/site-url";
+
+const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
   title: "AI Transcript Generator - Turn Video to Text Online Free",
   description:
     "Convert TikTok, Instagram, and Facebook videos to text in seconds. No signup required. Free 1-minute preview with 1-click copy.",
+  metadataBase: new URL(siteUrl),
+  icons: {
+    icon: "/ico.png",
+    shortcut: "/ico.png",
+    apple: "/ico.png",
+  },
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({

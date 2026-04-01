@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: "Transcript Result - Preview, Copy, and Export",
   description:
     "View transcript results, copy text, and continue to full export workflow for TikTok, Instagram, and Facebook videos.",
+  robots: {
+    index: false,
+    follow: false,
+  },
   keywords: [
     "transcript result",
     "transcript preview",

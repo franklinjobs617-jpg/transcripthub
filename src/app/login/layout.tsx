@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Billing - Transcripthub",
-  description: "Manage your subscription, credits, and billing orders.",
+  title: "Sign In - Transcripthub",
+  description: "Sign in with Google to access billing, credits, and account settings.",
   robots: {
     index: false,
     follow: false,
   },
   alternates: {
-    canonical: "/billing",
+    canonical: "/login",
   },
 };
 
-export default function BillingLayout({
+export default function LoginLayout({
   children,
 }: {
   children: React.ReactNode;

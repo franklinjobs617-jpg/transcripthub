@@ -39,9 +39,9 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 );
 
 export const metadata: Metadata = {
-  title: "Instagram Transcript Generator - Instagram Video Transcript & Script Extractor",
+  title: "Instagram Transcript Generator & Video Transcript Tool",
   description:
-    "Use an Instagram Transcript Generator to create an Instagram Video Transcript and clean script output for captions, repurposing, and subtitle export.",
+    "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
   keywords: [
     "instagram transcript",
     "instagram transcript generator",
@@ -54,18 +54,25 @@ export const metadata: Metadata = {
     canonical: "/instagram-transcript",
   },
   openGraph: {
-    title: "Instagram Transcript Generator - Instagram Video Transcript & Script Extractor",
+    title: "Instagram Transcript Generator & Video Transcript Tool",
     description:
-      "Use an Instagram Transcript Generator to create an Instagram Video Transcript and clean script output for captions, repurposing, and subtitle export.",
-    url: "https://transcripthub.com/instagram-transcript",
+      "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
+    url: "/instagram-transcript",
     siteName: "Transcripthub",
     type: "website",
+    images: [
+      {
+        url: "/captures/instagram-20260329.png",
+        alt: "Instagram transcript generator preview on Transcripthub",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instagram Transcript Generator - Instagram Video Transcript & Script Extractor",
+    title: "Instagram Transcript Generator & Video Transcript Tool",
     description:
-      "Use an Instagram Transcript Generator to create an Instagram Video Transcript and clean script output for captions, repurposing, and subtitle export.",
+      "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
+    images: ["/captures/instagram-20260329.png"],
   },
 };
 
@@ -120,35 +127,35 @@ export default function InstagramTranscriptPage() {
       />
       <section
         id="hero"
-        className="w-full px-4 pt-14 pb-10 sm:pt-18 sm:pb-14 lg:px-8 max-w-6xl mx-auto relative"
+        className="relative mx-auto w-full max-w-6xl px-4 pb-10 pt-14 sm:pb-14 sm:pt-20 lg:px-8"
       >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[380px] bg-gradient-to-b from-fuchsia-500/10 via-orange-400/5 to-transparent -z-10 pointer-events-none" />
+        <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[420px] w-full -translate-x-1/2 bg-[radial-gradient(circle_at_30%_10%,rgba(168,85,247,0.18),transparent_45%),radial-gradient(circle_at_70%_12%,rgba(249,115,22,0.14),transparent_46%)]" />
 
         <div className="flex flex-col items-center text-center">
-          <div className="inline-flex items-center px-3 py-1 text-xs font-bold mb-5 border border-fuchsia-400/35 bg-fuchsia-500/12 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-200 rounded-lg shadow-sm">
+          <div className="mb-5 inline-flex items-center rounded-lg border border-fuchsia-300/55 bg-fuchsia-50/70 px-3 py-1 text-xs font-bold text-fuchsia-700 shadow-sm dark:border-fuchsia-900/40 dark:bg-fuchsia-900/10 dark:text-fuchsia-300">
             <InstagramIcon className="mr-2 h-3.5 w-3.5" />
             Instagram Transcript Generator
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-app-text mb-5 max-w-4xl leading-tight">
-            Turn Instagram Reels into
+          <h1 className="mb-5 max-w-4xl text-3xl font-bold leading-tight tracking-tight text-app-text sm:text-5xl lg:text-6xl">
+            Turn Instagram videos into
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 via-purple-600 to-orange-500">
               {" "}
-              clean transcript scripts in seconds
+              transcript-ready scripts
             </span>
-            .
+            {" "}and captions in seconds
           </h1>
 
-          <p className="text-base sm:text-lg text-app-text-muted mb-7 max-w-2xl leading-relaxed">
-            One URL to accurate transcript output for captions, posts,
-            newsletters, and cross-platform repurposing.
+          <p className="mb-7 max-w-2xl text-base leading-relaxed text-app-text-muted sm:text-lg">
+            Built for creators: run Instagram transcript extraction, clean subtitle files,
+            and repurpose each Reel into blog, email, and social content.
           </p>
 
-          <div id="instagram-transcript-input" className="mb-6 w-full max-w-3xl scroll-mt-28">
+          <div id="instagram-transcript-input" className="mb-6 flex w-full scroll-mt-28 justify-center">
             <InstagramTranscriptTool />
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div className="mb-8 flex flex-wrap justify-center gap-2">
             {[
               "Reels",
               "Stories",
@@ -156,6 +163,7 @@ export default function InstagramTranscriptPage() {
               "SRT/TXT Export",
               "No Signup Preview",
               "Fast Processing",
+              "Creator SEO Content",
             ].map((chip) => (
               <span
                 key={chip}
@@ -166,20 +174,15 @@ export default function InstagramTranscriptPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-4xl">
+          <div className="grid w-full max-w-4xl grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: "Creators", value: "12k+" },
               { label: "Accuracy", value: "99.8%" },
               { label: "Avg Speed", value: "15s" },
-              { label: "Exports", value: "SRT/TXT" },
+              { label: "Export Types", value: "SRT/TXT" },
             ].map((item) => (
-              <div
-                key={item.label}
-                className="ui-card p-4 rounded-xl text-left bg-app-surface"
-              >
-                <div className="text-lg font-extrabold text-app-text">
-                  {item.value}
-                </div>
+              <div key={item.label} className="ui-card rounded-xl bg-app-surface p-4 text-left">
+                <div className="text-lg font-extrabold text-app-text">{item.value}</div>
                 <div className="text-[11px] font-bold uppercase tracking-wide text-app-text-muted">
                   {item.label}
                 </div>

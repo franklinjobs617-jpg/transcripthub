@@ -2,9 +2,9 @@ import { Metadata } from "next";
 import { HomeClient } from "@/components/pages/home-client";
 
 export const metadata: Metadata = {
-  title: "AI Transcript Generator - Video Transcript Generator for Social Media",
+  title: "AI Transcript Generator for TikTok, Instagram & Facebook",
   description:
-    "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Convert videos to text online with free preview.",
+    "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Paste a link, preview free, then copy or export subtitles.",
   keywords: [
     "transcript generator",
     "ai transcript generator",
@@ -18,18 +18,25 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "AI Transcript Generator - Video Transcript Generator for Social Media",
+    title: "AI Transcript Generator for TikTok, Instagram & Facebook",
     description:
-      "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Convert videos to text online with free preview.",
-    url: "https://transcripthub.com",
+      "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Paste a link, preview free, then copy or export subtitles.",
+    url: "/",
     siteName: "Transcripthub",
     type: "website",
+    images: [
+      {
+        url: "/captures/home-unified-20260329.png",
+        alt: "Transcripthub AI transcript generator homepage preview",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Transcript Generator - Video Transcript Generator for Social Media",
+    title: "AI Transcript Generator for TikTok, Instagram & Facebook",
     description:
-      "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Convert videos to text online with free preview.",
+      "AI Transcript Generator and Video Transcript Generator for TikTok, Instagram, and Facebook. Paste a link, preview free, then copy or export subtitles.",
+    images: ["/captures/home-unified-20260329.png"],
   },
 };
 
