@@ -44,8 +44,8 @@ export function LoginSuccessToast() {
     if (!user?.email) return;
     if (!consumeLoginSuccessFlag()) return;
 
-    setMounted(true);
     const frame = window.requestAnimationFrame(() => {
+      setMounted(true);
       setVisible(true);
     });
 
@@ -121,4 +121,3 @@ export function LoginSuccessToast() {
     </div>
   );
 }
-

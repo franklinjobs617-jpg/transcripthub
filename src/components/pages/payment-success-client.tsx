@@ -52,7 +52,7 @@ export function PaymentSuccessClient() {
       payerId,
       paypalIntent: subscriptionId ? "subscription" : orderId ? "capture" : undefined,
     };
-  }, [searchParams]);
+  }, [channelParam, searchParams]);
 
   useEffect(() => {
     let cancelled = false;
