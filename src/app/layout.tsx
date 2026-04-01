@@ -30,7 +30,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="system" className="h-full antialiased" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="system"
+      className="h-full antialiased"
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col bg-app-bg text-app-text selection:bg-app-primary-soft">
         <script
           dangerouslySetInnerHTML={{
@@ -62,6 +67,11 @@ export default function RootLayout({
             })(window, document, "clarity", "script", "w3ptlzj6kf");
           `}
         </Script>
+        <Script
+          src="https://cloud.umami.is/script.js"
+          data-website-id="4859ca34-35a5-4409-a313-d80344873093"
+          strategy="afterInteractive"
+        />
         <Script
           id="gtag-src"
           strategy="afterInteractive"
