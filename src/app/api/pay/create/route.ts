@@ -154,6 +154,8 @@ export async function POST(request: NextRequest) {
         project: requestedProject || "transcripthub",
         type: backendPlanCode,
         googleUserId: resolvedGoogleUserId,
+        userId: authUser?.id,
+        email: authUser?.email,
       };
       const upstream = await fetchWithTimeout(`${billingBase}${stripePath}`, {
         method: "POST",

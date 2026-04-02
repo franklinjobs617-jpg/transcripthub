@@ -64,6 +64,16 @@ export function getBearerTokenFromHeaders(headers: Headers): string | null {
   return authHeader.slice(7).trim();
 }
 
+function parseNumberish(value: unknown): number | undefined {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+      ? Number(value)
+      : NaN;
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export async function fetchAuthUserByToken(token: string): Promise<RemoteAuthUser | null> {
   try {
     const authBaseUrl = getAuthBackendBaseUrl();
@@ -77,9 +87,20 @@ export async function fetchAuthUserByToken(token: string): Promise<RemoteAuthUse
     });
 
     if (!response.ok) return null;
-    const payload = (await response.json()) as { data?: RemoteAuthUser };
-    if (!payload?.data?.email) return null;
-    return payload.data;
+    const payload = (await response.json()) as {
+      data?: RemoteAuthUser & { credits?: unknown };
+    };
+    const user = payload?.data;
+    if (!user) return null;
+
+    const normalizedId = user.id || user.googleUserId || user.email;
+    if (!normalizedId) return null;
+
+    return {
+      ...user,
+      id: normalizedId,
+      credits: parseNumberish(user.credits),
+    };
   } catch {
     return null;
   }

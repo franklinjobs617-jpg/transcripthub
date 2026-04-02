@@ -14,6 +14,7 @@ import {
   getGuestQuotaPolicy,
   hasChargedLink,
   markLinkCharged,
+  normalizeSourceUrl,
   resolveGuestIdentity,
 } from "@/lib/transcript-link-quota";
 
@@ -61,6 +62,20 @@ const DIRECT_LINK_RETRY_BASE_DELAY_MS = Math.max(
   100,
   Number.parseInt(process.env.DIRECT_LINK_RETRY_BASE_DELAY_MS || "500", 10) || 500
 );
+const DIRECT_LINK_CACHE_ENABLED =
+  (process.env.DIRECT_LINK_CACHE_ENABLED || "true").toLowerCase() === "true";
+const DIRECT_LINK_CACHE_TTL_SECONDS = Math.max(
+  30,
+  Number.parseInt(process.env.DIRECT_LINK_CACHE_TTL_SECONDS || "600", 10) || 600
+);
+const DIRECT_LINK_CACHE_MIN_TTL_SECONDS = Math.max(
+  5,
+  Number.parseInt(process.env.DIRECT_LINK_CACHE_MIN_TTL_SECONDS || "20", 10) || 20
+);
+const DIRECT_LINK_CACHE_EXPIRE_SAFETY_SECONDS = Math.max(
+  0,
+  Number.parseInt(process.env.DIRECT_LINK_CACHE_EXPIRE_SAFETY_SECONDS || "60", 10) || 60
+);
 const RETRYABLE_UPSTREAM_ERROR_CODES = new Set([
   "DIRECT_LINK_UNAVAILABLE",
   "VIDEO_UNAVAILABLE",
@@ -81,10 +96,12 @@ const DIRECT_LINK_KEYS = [
 ] as const;
 
 type UpstreamDirectLinkResponse = {
-  upstream: Response;
+  status: number;
+  ok: boolean;
   text: string;
   contentType: string;
   parsedBody: unknown;
+  source: "upstream" | "cache";
 };
 
 type IpRateLimitState = {
@@ -92,8 +109,16 @@ type IpRateLimitState = {
   resetAtMs: number;
 };
 
+type DirectLinkCacheEntry = {
+  expiresAtMs: number;
+  value: Omit<UpstreamDirectLinkResponse, "source">;
+};
+
 const ipRateLimitByKey = new Map<string, IpRateLimitState>();
 let lastIpRateSweepAtMs = 0;
+const directLinkSuccessCacheByKey = new Map<string, DirectLinkCacheEntry>();
+const directLinkInflightByKey = new Map<string, Promise<UpstreamDirectLinkResponse>>();
+let lastDirectLinkCacheSweepAtMs = 0;
 
 function parseJsonSafely(rawText: string): unknown {
   try {
@@ -184,10 +209,12 @@ async function fetchDirectLinkWithRetry({
 
       if (!shouldRetry) {
         return {
-          upstream,
+          status: upstream.status,
+          ok: upstream.ok,
           text,
           contentType,
           parsedBody,
+          source: "upstream",
         };
       }
     } catch (error) {
@@ -204,6 +231,156 @@ async function fetchDirectLinkWithRetry({
   }
 
   throw lastCaughtError ?? new Error("UPSTREAM_RETRY_EXHAUSTED");
+}
+
+function buildDirectLinkCacheKey(
+  platform: TranscriptPlatform,
+  actorId: string,
+  sourceUrl: string
+): string {
+  const normalizedSourceUrl = normalizeSourceUrl(sourceUrl).trim();
+  if (!normalizedSourceUrl) return "";
+  return `${platform}|${actorId}|${normalizedSourceUrl}`;
+}
+
+function sweepDirectLinkCache(nowMs: number): void {
+  if (nowMs - lastDirectLinkCacheSweepAtMs < 30_000) return;
+  for (const [key, entry] of directLinkSuccessCacheByKey.entries()) {
+    if (entry.expiresAtMs <= nowMs) {
+      directLinkSuccessCacheByKey.delete(key);
+    }
+  }
+  lastDirectLinkCacheSweepAtMs = nowMs;
+}
+
+function getDirectMediaExpiresAtMs(parsedBody: unknown): number | null {
+  const rawValue = (
+    parsedBody as {
+      direct_link?: { direct_media_expires_at?: unknown };
+    } | null
+  )?.direct_link?.direct_media_expires_at;
+  if (rawValue === undefined || rawValue === null) return null;
+
+  const numeric =
+    typeof rawValue === "number"
+      ? rawValue
+      : typeof rawValue === "string"
+      ? Number(rawValue)
+      : NaN;
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+
+  const asMs = numeric > 10_000_000_000 ? numeric : numeric * 1000;
+  if (asMs <= Date.now()) return null;
+  return asMs;
+}
+
+function computeDirectLinkCacheExpiresAtMs(parsedBody: unknown): number {
+  const nowMs = Date.now();
+  const defaultTtlMs = DIRECT_LINK_CACHE_TTL_SECONDS * 1000;
+  const minTtlMs = DIRECT_LINK_CACHE_MIN_TTL_SECONDS * 1000;
+  const safetyMs = DIRECT_LINK_CACHE_EXPIRE_SAFETY_SECONDS * 1000;
+  let ttlMs = defaultTtlMs;
+
+  const directMediaExpiresAtMs = getDirectMediaExpiresAtMs(parsedBody);
+  if (directMediaExpiresAtMs) {
+    const remainingMs = directMediaExpiresAtMs - nowMs - safetyMs;
+    if (remainingMs > 0) {
+      ttlMs = Math.min(ttlMs, remainingMs);
+    }
+  }
+
+  if (ttlMs < minTtlMs) {
+    return nowMs;
+  }
+
+  return nowMs + ttlMs;
+}
+
+function readDirectLinkCache(cacheKey: string): UpstreamDirectLinkResponse | null {
+  if (!DIRECT_LINK_CACHE_ENABLED || !cacheKey) return null;
+  const nowMs = Date.now();
+  sweepDirectLinkCache(nowMs);
+
+  const entry = directLinkSuccessCacheByKey.get(cacheKey);
+  if (!entry) return null;
+  if (entry.expiresAtMs <= nowMs) {
+    directLinkSuccessCacheByKey.delete(cacheKey);
+    return null;
+  }
+
+  return {
+    ...entry.value,
+    source: "cache",
+  };
+}
+
+function writeDirectLinkCache(
+  cacheKey: string,
+  upstreamResult: UpstreamDirectLinkResponse
+): void {
+  if (!DIRECT_LINK_CACHE_ENABLED || !cacheKey) return;
+  if (!upstreamResult.ok) return;
+  if (!hasUsableDirectLink(upstreamResult.parsedBody)) return;
+
+  const expiresAtMs = computeDirectLinkCacheExpiresAtMs(upstreamResult.parsedBody);
+  if (expiresAtMs <= Date.now()) return;
+
+  directLinkSuccessCacheByKey.set(cacheKey, {
+    expiresAtMs,
+    value: {
+      status: upstreamResult.status,
+      ok: upstreamResult.ok,
+      text: upstreamResult.text,
+      contentType: upstreamResult.contentType,
+      parsedBody: upstreamResult.parsedBody,
+    },
+  });
+}
+
+async function fetchDirectLinkWithMemoryCache({
+  baseUrl,
+  platform,
+  token,
+  bodyText,
+  cacheKey,
+}: {
+  baseUrl: string;
+  platform: TranscriptPlatform;
+  token: string | null;
+  bodyText: string;
+  cacheKey: string;
+}): Promise<UpstreamDirectLinkResponse> {
+  const cached = readDirectLinkCache(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const inflight = cacheKey ? directLinkInflightByKey.get(cacheKey) : null;
+  if (inflight) {
+    return inflight;
+  }
+
+  const requestPromise = fetchDirectLinkWithRetry({
+    baseUrl,
+    platform,
+    token,
+    bodyText,
+  }).then((result) => {
+    writeDirectLinkCache(cacheKey, result);
+    return result;
+  });
+
+  if (cacheKey) {
+    directLinkInflightByKey.set(cacheKey, requestPromise);
+  }
+
+  try {
+    return await requestPromise;
+  } finally {
+    if (cacheKey) {
+      directLinkInflightByKey.delete(cacheKey);
+    }
+  }
 }
 
 function buildErrorBody(code: string, message: string, details?: unknown): ErrorBody {
@@ -408,6 +585,11 @@ export async function handleTranscriptDirectLink(
 
   const bodyText = await request.text();
   const requestUrl = extractRequestUrl(bodyText);
+  const directLinkCacheKey = buildDirectLinkCacheKey(
+    platform,
+    actor.actorId,
+    requestUrl
+  );
   const guestQuotaPolicy = getGuestQuotaPolicy();
   const dayKey = guestQuotaPolicy.dayKey;
   const guestLinkLimit = guestQuotaPolicy.guestLimit;
@@ -458,22 +640,23 @@ export async function handleTranscriptDirectLink(
   const baseUrl = getTranscriptBackendBaseUrl();
   let upstreamResult: UpstreamDirectLinkResponse;
   try {
-    upstreamResult = await fetchDirectLinkWithRetry({
+    upstreamResult = await fetchDirectLinkWithMemoryCache({
       baseUrl,
       platform,
       token,
       bodyText,
+      cacheKey: directLinkCacheKey,
     });
   } catch {
     return buildInternalErrorResponse(request, guestResolution);
   }
 
-  const { upstream, text, contentType, parsedBody } = upstreamResult;
+  const { ok, status, text, contentType, parsedBody } = upstreamResult;
 
   const responseVideoId = extractVideoId(parsedBody);
   const finalLinkKey = buildLinkKey(platform, requestUrl, responseVideoId || undefined);
   const alreadyChargedByFinalKey = hasChargedLink(actor.actorId, dayKey, finalLinkKey);
-  const isSuccessfulDirectLink = upstream.ok && hasUsableDirectLink(parsedBody);
+  const isSuccessfulDirectLink = ok && hasUsableDirectLink(parsedBody);
 
   if (isSuccessfulDirectLink && !alreadyChargedByFinalKey) {
     if (actor.actorType === "guest") {
@@ -521,7 +704,7 @@ export async function handleTranscriptDirectLink(
   }
 
   const response = new NextResponse(text, {
-    status: upstream.status,
+    status,
     headers: {
       "content-type": contentType,
     },
