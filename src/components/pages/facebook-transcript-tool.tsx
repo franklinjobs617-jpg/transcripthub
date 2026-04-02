@@ -18,6 +18,7 @@ import {
   type FacebookDirectLinkPayload,
   type FacebookInfoPayload,
 } from "@/lib/facebook-transcript-api";
+import { parseKieTranscriptResult } from "@/lib/kie-word-segments";
 import { GoogleLoginModal } from "@/components/auth/google-login-modal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { FacebookIcon } from "@/components/shared/social-icons";
@@ -79,23 +80,26 @@ function buildKieTranscriptContent(
 ): FacebookContentPayload | null {
   const kie = directPayload.kie;
   if (!kie?.submitted || kie.state !== "success") return null;
-  const transcriptText = String(kie.transcript_text || "").trim();
+  const parsedKie = parseKieTranscriptResult(kie.result, kie.transcript_text);
+  const transcriptText = parsedKie.transcriptText;
   if (!transcriptText) return null;
-  const resultObject =
-    (kie.result as { resultObject?: { language_code?: string } } | undefined)?.resultObject || {};
+  const segments: TranscriptSegment[] =
+    parsedKie.segments.length > 0
+      ? parsedKie.segments
+      : [{ start: 0, end: 0, text: transcriptText }];
   return {
     ok: true,
     platform: "facebook",
-    lang_used: normalizeKieLanguage(resultObject.language_code),
+    lang_used: normalizeKieLanguage(parsedKie.languageCode),
     source: "asr",
     video: {
       title: directPayload.video.title || infoPayload.video.title,
       thumbnail: directPayload.video.thumbnail || infoPayload.video.thumbnail,
     },
     content: {
-      segments: [{ start: 0, end: 0, text: transcriptText }],
+      segments,
       full_text: transcriptText,
-      line_count: 1,
+      line_count: segments.length,
       char_count: transcriptText.length,
     },
   };
@@ -124,6 +128,7 @@ export default function FacebookTranscriptTool() {
   const [errorCode, setErrorCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
+  const [showTimestamps, setShowTimestamps] = useState(true);
 
   const resultRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -218,15 +223,46 @@ export default function FacebookTranscriptTool() {
 
   const segments = useMemo<TranscriptSegment[]>(() => {
     const raw = content?.content.segments || [];
-    const safe = raw.filter((s) => (s.text || "").trim().length > 0);
+    const safe = raw
+      .map((seg) => ({
+        start: Number.isFinite(seg.start) ? seg.start : 0,
+        end: Number.isFinite(seg.end) ? seg.end : 0,
+        text: (seg.text || "").trim(),
+      }))
+      .filter((s) => s.text.length > 0);
     if (safe.length) return safe;
     const text = (content?.content.full_text || "").trim();
     return text ? [{ start: 0, end: 0, text }] : [];
   }, [content]);
 
+  const hasReliableTimestamps = useMemo(() => {
+    if (segments.length <= 1) {
+      return false;
+    }
+    const starts = segments
+      .map((seg) => seg.start)
+      .filter((value) => Number.isFinite(value) && value >= 0);
+    const uniqueStarts = new Set(starts.map((value) => value.toFixed(2)));
+    const hasSequentialRange =
+      segments.some((seg) => seg.start > 0 || seg.end > seg.start) &&
+      uniqueStarts.size > 1;
+    return hasSequentialRange;
+  }, [segments]);
+
+  const showTimestampInPreview = showTimestamps && hasReliableTimestamps;
   const transcriptReady = !!content && segments.length > 0 && !isSubmitting;
   const showPreviewLoading = isSubmitting && segments.length === 0;
-  const previewText = segments.map((s) => s.text).join("\n");
+  const previewText = useMemo(() => {
+    if (!segments.length) {
+      return "";
+    }
+    if (!showTimestampInPreview) {
+      return segments.map((segment) => segment.text).join("\n");
+    }
+    return segments
+      .map((segment) => `[${formatTimestamp(segment.start)}] ${segment.text}`)
+      .join("\n");
+  }, [segments, showTimestampInPreview]);
   const thumbnail = info?.video.thumbnail || content?.video?.thumbnail || "";
   const thumbnailProxy = thumbnail
     ? `/api/facebook/transcript/thumbnail?url=${encodeURIComponent(thumbnail)}`
@@ -354,13 +390,45 @@ export default function FacebookTranscriptTool() {
                 </div>
 
                 <div className="rounded-xl border border-app-border bg-app-bg/60 p-3">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-app-text-muted">Preview - {content?.content.line_count || 0} lines - {content?.content.char_count || 0} chars</p>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-app-text-muted">
+                      Preview - {content?.content.line_count || 0} lines -{" "}
+                      {content?.content.char_count || 0} chars
+                    </p>
+                    {hasReliableTimestamps ? (
+                      <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-app-text-muted">
+                        <input
+                          type="checkbox"
+                          checked={showTimestamps}
+                          onChange={(event) =>
+                            setShowTimestamps(event.target.checked)
+                          }
+                          className="h-3.5 w-3.5 rounded border-app-border text-app-accent focus:ring-app-accent"
+                        />
+                        Show timestamps
+                      </label>
+                    ) : null}
+                  </div>
                   <div className="min-h-[180px]">
                     {segments.length > 0 ? (
                       <div className="space-y-2.5">
                         {segments.map((segment, idx) => (
-                          <div key={`${idx}-${segment.start}`} className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-[1.04rem] font-medium leading-8 text-app-text">
-                            {segment.text}
+                          <div
+                            key={`${idx}-${segment.start}`}
+                            className={`grid items-start gap-2.5 ${
+                              showTimestampInPreview
+                                ? "grid-cols-[86px_minmax(0,1fr)]"
+                                : "grid-cols-1"
+                            }`}
+                          >
+                            {showTimestampInPreview ? (
+                              <span className="pt-2 text-sm font-extrabold tabular-nums text-cyan-600 dark:text-cyan-300">
+                                {formatTimestamp(segment.start)}
+                              </span>
+                            ) : null}
+                            <div className="rounded-lg border border-app-border bg-app-surface px-4 py-3 text-[1.04rem] font-medium leading-8 text-app-text">
+                              {segment.text}
+                            </div>
                           </div>
                         ))}
                       </div>

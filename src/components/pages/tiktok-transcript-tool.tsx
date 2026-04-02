@@ -21,6 +21,7 @@ import {
   type TikTokDirectLinkPayload,
   type TikTokInfoPayload,
 } from "@/lib/tiktok-transcript-api";
+import { parseKieTranscriptResult } from "@/lib/kie-word-segments";
 import { GoogleLoginModal } from "@/components/auth/google-login-modal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { TikTokIcon } from "@/components/shared/social-icons";
@@ -190,21 +191,20 @@ function buildKieTranscriptContent(
     return null;
   }
 
-  const resultObject =
-    (kie.result as { resultObject?: { language_code?: string } } | undefined)
-      ?.resultObject || {};
-  const transcriptText = String(kie.transcript_text || "").trim();
+  const parsedKie = parseKieTranscriptResult(kie.result, kie.transcript_text);
+  const transcriptText = parsedKie.transcriptText;
   if (!transcriptText) {
     return null;
   }
 
-  const segments: TranscriptSegment[] = [
-    { start: 0, end: 0, text: transcriptText },
-  ];
+  const segments: TranscriptSegment[] =
+    parsedKie.segments.length > 0
+      ? parsedKie.segments
+      : [{ start: 0, end: 0, text: transcriptText }];
   return {
     ok: true,
     platform: "tiktok",
-    lang_used: normalizeKieLanguage(resultObject.language_code),
+    lang_used: normalizeKieLanguage(parsedKie.languageCode),
     source: "asr",
     asr_provider: "none",
     transcript_available: true,
@@ -235,7 +235,7 @@ function buildKieTranscriptContent(
     content: {
       segments,
       full_text: transcriptText,
-      line_count: 1,
+      line_count: segments.length,
       char_count: transcriptText.length,
     },
   };
@@ -845,7 +845,7 @@ export default function TikTokTranscriptTool() {
                         By {info.video.uploader || "Creator"}
                       </span>
                       <span>•</span>
-                      <span>{formatTimestamp(info.video.duration as any)}</span>
+                      <span>{formatTimestamp(Number(info.video.duration) || 0)}</span>
                     </div>
                   </div>
                 </header>
