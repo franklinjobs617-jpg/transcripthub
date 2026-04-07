@@ -39,24 +39,27 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 );
 
 export const metadata: Metadata = {
-  title: "Instagram Transcript Generator & Video Transcript Tool",
+  title: "Instagram Transcript Extractor & Generator Tool",
   description:
-    "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
+    "Use our Instagram Transcript Extractor and Generator to turn reels into transcript text, script-ready output, and subtitle exports in SRT/TXT.",
   keywords: [
     "instagram transcript",
+    "instagram transcript extractor",
     "instagram transcript generator",
     "instagram reels transcript",
     "instagram video transcript",
     "instagram script extractor",
+    "transcript instagram",
+    "free instagram script extractor",
     "ig reels script",
   ],
   alternates: {
     canonical: "/instagram-transcript",
   },
   openGraph: {
-    title: "Instagram Transcript Generator & Video Transcript Tool",
+    title: "Instagram Transcript Extractor & Generator Tool",
     description:
-      "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
+      "Use our Instagram Transcript Extractor and Generator to turn reels into transcript text, script-ready output, and subtitle exports in SRT/TXT.",
     url: "/instagram-transcript",
     siteName: "Transcripthub",
     type: "website",
@@ -69,14 +72,18 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instagram Transcript Generator & Video Transcript Tool",
+    title: "Instagram Transcript Extractor & Generator Tool",
     description:
-      "Generate an Instagram Video Transcript with our Instagram Transcript Generator and Instagram Script Extractor for reels, captions, and subtitle export.",
+      "Use our Instagram Transcript Extractor and Generator to turn reels into transcript text, script-ready output, and subtitle exports in SRT/TXT.",
     images: ["/captures/instagram-20260329.png"],
   },
 };
 
 const faqItems = [
+  {
+    q: "Is this an Instagram transcript extractor or a script extractor?",
+    a: "Both. It works as an Instagram Transcript Extractor and Instagram Script Extractor for public reels and video links.",
+  },
   {
     q: "Can I transcribe Instagram reels directly?",
     a: "Yes. For supported public links, you can generate transcript preview and export-ready subtitle output.",
@@ -199,7 +206,8 @@ export default function InstagramTranscriptPage() {
               Instagram Video Transcript and Script Extractor Workflow
             </h2>
             <p className="mt-3 max-w-4xl text-sm leading-relaxed text-app-text-muted">
-              This page combines Instagram Video Transcript generation with an Instagram Script
+              This page combines Instagram Video Transcript generation with an Instagram Transcript
+              Extractor and Instagram Script
               Extractor workflow, so creators can move from spoken video to editable text in one
               pass. You can start with preview mode, validate transcript quality, and then export
               subtitle-ready output for publishing and repurposing.

@@ -35,12 +35,14 @@ const FacebookIcon = ({ className }: { className?: string }) => (
 );
 
 export const metadata: Metadata = {
-  title: "Facebook Transcript Generator & Video to Text Tool",
+  title: "Facebook Transcript Generator (FB to Transcript) Tool",
   description:
-    "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
+    "Convert Facebook videos with an FB to transcript workflow into clean text and subtitle-ready files for repurposing, caption workflows, and publishing.",
   keywords: [
     "facebook transcript",
     "facebook transcript generator",
+    "fb to transcript",
+    "facebook transcript extractor",
     "facebook video to text",
     "fb video transcript",
     "facebook video script",
@@ -51,9 +53,9 @@ export const metadata: Metadata = {
     canonical: "/facebook-transcript",
   },
   openGraph: {
-    title: "Facebook Transcript Generator & Video to Text Tool",
+    title: "Facebook Transcript Generator (FB to Transcript) Tool",
     description:
-      "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
+      "Convert Facebook videos with an FB to transcript workflow into clean text and subtitle-ready files for repurposing, caption workflows, and publishing.",
     url: "/facebook-transcript",
     siteName: "Transcripthub",
     type: "website",
@@ -66,14 +68,19 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Facebook Transcript Generator & Video to Text Tool",
+    title: "Facebook Transcript Generator (FB to Transcript) Tool",
     description:
-      "Convert Facebook videos into clean transcript text and subtitle-ready files for repurposing, caption workflows, and content publishing.",
+      "Convert Facebook videos with an FB to transcript workflow into clean text and subtitle-ready files for repurposing, caption workflows, and publishing.",
     images: ["/captures/facebook-20260329.png"],
   },
 };
 
 const faqItems = [
+  {
+    question: "Can this handle an FB to transcript workflow?",
+    answer:
+      "Yes. Paste a public Facebook URL and convert FB video to transcript text with subtitle export options.",
+  },
   {
     question: "Can I generate a Facebook transcript online?",
     answer:
