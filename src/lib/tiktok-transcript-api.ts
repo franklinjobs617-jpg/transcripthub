@@ -77,7 +77,7 @@ export type TikTokContentPayload = {
   platform: "tiktok";
   lang_used: string;
   source: "raw" | "asr" | "audio_extracted";
-  asr_provider?: "huggingface" | "openai" | "none";
+  asr_provider?: "groq" | "huggingface" | "openai" | "none";
   transcript_available?: boolean;
   asr_error?: {
     code: string;
