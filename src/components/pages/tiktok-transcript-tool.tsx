@@ -35,8 +35,8 @@ const LOADING_STEPS = [
   "Extracting audio",
   "Generating transcript",
 ] as const;
-const KIE_POLL_MAX_ROUNDS = 12;
-const KIE_POLL_INTERVAL_MS = 3000;
+const KIE_POLL_MAX_ROUNDS = 2;
+const KIE_POLL_INTERVAL_MS = 1000;
 
 type TranscriptSegment = {
   start: number;
@@ -333,8 +333,10 @@ export default function TikTokTranscriptTool() {
     setLoadingSeconds(0);
 
     try {
-      const infoPayload = await getTikTokTranscriptInfo(cleanUrl, "en");
       setLoadingStepIndex(1);
+      const infoPromise = getTikTokTranscriptInfo(cleanUrl, "en");
+      const directPromise = getTikTokDirectLink(cleanUrl);
+      const infoPayload = await infoPromise;
       setInfo(infoPayload);
       setSubmittedUrl(cleanUrl);
 
@@ -345,7 +347,7 @@ export default function TikTokTranscriptTool() {
       setSelectedLang(initialLang);
 
       setLoadingStepIndex(2);
-      let latestPayload = await getTikTokDirectLink(cleanUrl);
+      let latestPayload = await directPromise;
       setDirectLink(latestPayload);
       let kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
 

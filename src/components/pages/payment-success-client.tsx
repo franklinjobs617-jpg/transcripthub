@@ -37,8 +37,13 @@ export function PaymentSuccessClient() {
 
     const sessionId = searchParams.get("session_id") || undefined;
     const orderId = searchParams.get("order_id") || undefined;
-    const subscriptionId = searchParams.get("subscription_id") || undefined;
-    const payerId = searchParams.get("payer_id") || undefined;
+    const legacyToken = searchParams.get("token") || searchParams.get("ba_token");
+    const subscriptionId = searchParams.get("subscription_id") || legacyToken || undefined;
+    const payerId =
+      searchParams.get("payer_id") ||
+      searchParams.get("PayerID") ||
+      searchParams.get("payerID") ||
+      undefined;
 
     if (!sessionId && !orderId && !subscriptionId) {
       return null;

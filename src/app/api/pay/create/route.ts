@@ -241,18 +241,18 @@ export async function POST(request: NextRequest) {
     }
 
     const extracted = extractPayPalToken(payload);
-    if (paypalIntent === "subscription" && !extracted.subscriptionId) {
+    if (paypalIntent === "subscription" && !extracted.subscriptionId && !extracted.approvalUrl) {
       return errorResponse(
         "PAYPAL_SUBSCRIPTION_ID_MISSING",
-        "PayPal subscription ID was not returned.",
+        "PayPal subscription ID or approval URL was not returned.",
         502,
         payload
       );
     }
-    if (paypalIntent === "capture" && !extracted.orderId) {
+    if (paypalIntent === "capture" && !extracted.orderId && !extracted.approvalUrl) {
       return errorResponse(
         "PAYPAL_ORDER_ID_MISSING",
-        "PayPal order ID was not returned.",
+        "PayPal order ID or approval URL was not returned.",
         502,
         payload
       );

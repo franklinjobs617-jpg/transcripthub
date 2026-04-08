@@ -286,8 +286,10 @@ export default function InstagramTranscriptTool() {
     setLoadingSeconds(0);
 
     try {
-      const infoPayload = await getInstagramTranscriptInfo(cleanUrl, "en");
       setLoadingStepIndex(1);
+      const infoPromise = getInstagramTranscriptInfo(cleanUrl, "en");
+      const directPromise = getInstagramDirectLink(cleanUrl);
+      const infoPayload = await infoPromise;
       setInfo(infoPayload);
       setSubmittedUrl(cleanUrl);
       const initialLang =
@@ -296,7 +298,7 @@ export default function InstagramTranscriptTool() {
         "en";
       setSelectedLang(initialLang);
       setLoadingStepIndex(2);
-      let latestPayload = await getInstagramDirectLink(cleanUrl);
+      let latestPayload = await directPromise;
       setDirectLink(latestPayload);
       let kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
 

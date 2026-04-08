@@ -670,6 +670,11 @@ export default function PricingPage() {
                                 paypalIntent: "capture",
                               });
 
+                              if (created.ok && !created.data.orderId && created.data.approvalUrl) {
+                                window.location.assign(created.data.approvalUrl);
+                                return "";
+                              }
+
                               if (!created.ok || !created.data.orderId) {
                                 setPaymentError(
                                   created.ok
@@ -708,6 +713,15 @@ export default function PricingPage() {
                                 billingCycle,
                                 paypalIntent: "subscription",
                               });
+
+                              if (
+                                created.ok &&
+                                !created.data.subscriptionId &&
+                                created.data.approvalUrl
+                              ) {
+                                window.location.assign(created.data.approvalUrl);
+                                return "";
+                              }
 
                               if (!created.ok || !created.data.subscriptionId) {
                                 setPaymentError(

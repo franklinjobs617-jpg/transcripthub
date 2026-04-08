@@ -149,11 +149,13 @@ export default function FacebookTranscriptTool() {
     setLoadingSeconds(0);
 
     try {
-      const infoPayload = await getFacebookTranscriptInfo(raw, "en");
+      const infoPromise = getFacebookTranscriptInfo(raw, "en");
+      const directPromise = getFacebookDirectLink(raw);
+      const infoPayload = await infoPromise;
       setInfo(infoPayload);
       setSubmittedUrl(raw);
 
-      let latest = await getFacebookDirectLink(raw);
+      let latest = await directPromise;
       setDirectLink(latest);
       let kieContent = buildKieTranscriptContent(latest, infoPayload);
 
