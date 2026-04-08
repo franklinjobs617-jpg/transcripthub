@@ -53,6 +53,7 @@ type PayPalCheckoutPaneProps = {
   paypalClientId: string;
   reloadSeed: number;
   processing: boolean;
+  redirecting: boolean;
   onRetry: () => void;
   onCreateOrder?: () => Promise<string>;
   onCreateSubscription?: () => Promise<string>;
@@ -67,6 +68,7 @@ function PayPalButtonsContent({
   plan,
   billingCycle,
   processing,
+  redirecting,
   onRetry,
   onCreateOrder,
   onCreateSubscription,
@@ -116,28 +118,35 @@ function PayPalButtonsContent({
       ) : null}
 
       <div className={isPending || isRejected ? "hidden" : "block"}>
-        <PayPalButtons
-          style={{
-            layout: "vertical",
-            color: "gold",
-            shape: "pill",
-            label: plan.paypalIntent === "subscription" ? "subscribe" : "pay",
-            height: 46,
-          }}
-          forceReRender={[plan.planCode, plan.paypalIntent, billingCycle]}
-          createOrder={plan.paypalIntent === "capture" ? onCreateOrder : undefined}
-          createSubscription={
-            plan.paypalIntent === "subscription" ? onCreateSubscription : undefined
-          }
-          onApprove={async (data) => {
-            await onApprove({
-              orderId: data.orderID ?? undefined,
-              subscriptionId: data.subscriptionID ?? undefined,
-            });
-          }}
-          onCancel={onCancel}
-          onError={onError}
-        />
+        {redirecting ? (
+          <div className="space-y-2">
+            <div className="h-11 animate-pulse rounded-full bg-app-primary-soft" />
+            <p className="text-xs text-app-text-muted">Redirecting to PayPal...</p>
+          </div>
+        ) : (
+          <PayPalButtons
+            style={{
+              layout: "vertical",
+              color: "gold",
+              shape: "pill",
+              label: plan.paypalIntent === "subscription" ? "subscribe" : "pay",
+              height: 46,
+            }}
+            forceReRender={[plan.planCode, plan.paypalIntent, billingCycle]}
+            createOrder={plan.paypalIntent === "capture" ? onCreateOrder : undefined}
+            createSubscription={
+              plan.paypalIntent === "subscription" ? onCreateSubscription : undefined
+            }
+            onApprove={async (data) => {
+              await onApprove({
+                orderId: data.orderID ?? undefined,
+                subscriptionId: data.subscriptionID ?? undefined,
+              });
+            }}
+            onCancel={onCancel}
+            onError={onError}
+          />
+        )}
       </div>
 
       {processing ? (
@@ -180,6 +189,7 @@ export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("yearly");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [paypalProcessingPlan, setPaypalProcessingPlan] = useState<string | null>(null);
+  const [paypalRedirectingPlan, setPaypalRedirectingPlan] = useState<string | null>(null);
   const [paypalReloadSeed, setPaypalReloadSeed] = useState(0);
   const [paymentError, setPaymentError] = useState("");
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -196,6 +206,7 @@ export default function PricingPage() {
     const resetCheckoutUiState = () => {
       setLoadingPlan(null);
       setPaypalProcessingPlan(null);
+      setPaypalRedirectingPlan(null);
       setPaypalReloadSeed((prev) => prev + 1);
     };
 
@@ -656,10 +667,12 @@ export default function PricingPage() {
                         paypalClientId={paypalClientId}
                         reloadSeed={paypalReloadSeed}
                         processing={paypalProcessingPlan === plan.planCode}
+                        redirecting={paypalRedirectingPlan === plan.planCode}
                         onRetry={bumpPaypalReloadSeed}
                         onCreateOrder={
                           plan.paypalIntent === "capture"
                             ? async () => {
+                              setPaypalRedirectingPlan(plan.planCode!);
                               const created = await createPayment({
                                 channel: "paypal",
                                 planCode: plan.planCode!,
@@ -702,6 +715,7 @@ export default function PricingPage() {
                                     ? "PAYPAL_ORDER_ID_MISSING"
                                     : created.error.code,
                                 });
+                                setPaypalRedirectingPlan(null);
                                 return "";
                               }
 
@@ -710,6 +724,7 @@ export default function PricingPage() {
                                 planCode: plan.planCode,
                                 intent: "capture",
                               });
+                              setPaypalRedirectingPlan(null);
                               return created.data.orderId;
                             }
                             : undefined
@@ -717,6 +732,7 @@ export default function PricingPage() {
                         onCreateSubscription={
                           plan.paypalIntent === "subscription"
                             ? async () => {
+                              setPaypalRedirectingPlan(plan.planCode!);
                               const created = await createPayment({
                                 channel: "paypal",
                                 planCode: plan.planCode!,
@@ -759,6 +775,7 @@ export default function PricingPage() {
                                     ? "PAYPAL_SUBSCRIPTION_ID_MISSING"
                                     : created.error.code,
                                 });
+                                setPaypalRedirectingPlan(null);
                                 return "";
                               }
 
@@ -767,14 +784,17 @@ export default function PricingPage() {
                                 planCode: plan.planCode,
                                 intent: "subscription",
                               });
+                              setPaypalRedirectingPlan(null);
                               return created.data.subscriptionId;
                             }
                             : undefined
                         }
                         onApprove={async (data) => {
+                          setPaypalRedirectingPlan(null);
                           await handlePayPalApprove(plan, data);
                         }}
                         onCancel={() => {
+                          setPaypalRedirectingPlan(null);
                           setPaymentError(
                             "PayPal checkout was cancelled. The button has been refreshed and is ready again."
                           );
@@ -786,6 +806,7 @@ export default function PricingPage() {
                           });
                         }}
                         onError={() => {
+                          setPaypalRedirectingPlan(null);
                           setPaymentError("PayPal checkout failed. Please retry.");
                           bumpPaypalReloadSeed();
                           trackPaymentEvent("pay_create_fail", {
