@@ -88,6 +88,10 @@ function extractPayPalToken(payload: unknown): {
       candidate.trim() &&
       (candidate.startsWith("I-") || !result.orderId)
     ) {
+      if (candidate.startsWith("http")) {
+        result.approvalUrl = candidate;
+        break;
+      }
       result.subscriptionId = candidate;
       break;
     }

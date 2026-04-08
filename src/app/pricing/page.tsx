@@ -670,8 +670,21 @@ export default function PricingPage() {
                                 paypalIntent: "capture",
                               });
 
-                              if (created.ok && !created.data.orderId && created.data.approvalUrl) {
+                              if (
+                                created.ok &&
+                                !created.data.orderId &&
+                                created.data.approvalUrl
+                              ) {
                                 window.location.assign(created.data.approvalUrl);
+                                return "";
+                              }
+
+                              if (
+                                created.ok &&
+                                typeof created.data.orderId === "string" &&
+                                created.data.orderId.startsWith("http")
+                              ) {
+                                window.location.assign(created.data.orderId);
                                 return "";
                               }
 
@@ -720,6 +733,15 @@ export default function PricingPage() {
                                 created.data.approvalUrl
                               ) {
                                 window.location.assign(created.data.approvalUrl);
+                                return "";
+                              }
+
+                              if (
+                                created.ok &&
+                                typeof created.data.subscriptionId === "string" &&
+                                created.data.subscriptionId.startsWith("http")
+                              ) {
+                                window.location.assign(created.data.subscriptionId);
                                 return "";
                               }
 
