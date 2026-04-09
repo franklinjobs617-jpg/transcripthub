@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Clock3, Home, Loader2, RefreshCw, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock3,
+  Home,
+  Loader2,
+  RefreshCw,
+  XCircle,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { verifyPayment } from "@/lib/payment-gateway-client";
 import type { PaymentChannel, PaymentVerifyRequest } from "@/lib/payment-types";
@@ -32,13 +39,15 @@ export function PaymentSuccessClient() {
       channelParam === "paypal" || channelParam === "stripe"
         ? channelParam
         : searchParams.get("session_id")
-          ? "stripe"
-          : "paypal";
+        ? "stripe"
+        : "paypal";
 
     const sessionId = searchParams.get("session_id") || undefined;
     const orderId = searchParams.get("order_id") || undefined;
-    const legacyToken = searchParams.get("token") || searchParams.get("ba_token");
-    const subscriptionId = searchParams.get("subscription_id") || legacyToken || undefined;
+    const legacyToken =
+      searchParams.get("token") || searchParams.get("ba_token");
+    const subscriptionId =
+      searchParams.get("subscription_id") || legacyToken || undefined;
     const payerId =
       searchParams.get("payer_id") ||
       searchParams.get("PayerID") ||
@@ -55,7 +64,11 @@ export function PaymentSuccessClient() {
       orderId,
       subscriptionId,
       payerId,
-      paypalIntent: subscriptionId ? "subscription" : orderId ? "capture" : undefined,
+      paypalIntent: subscriptionId
+        ? "subscription"
+        : orderId
+        ? "capture"
+        : undefined,
     };
   }, [channelParam, searchParams]);
 
@@ -69,7 +82,9 @@ export function PaymentSuccessClient() {
           return;
         }
         setStatus("error");
-        setMessage("Missing payment identifiers. Please contact support if you were charged.");
+        setMessage(
+          "Missing payment identifiers. Please contact support if you were charged."
+        );
         return;
       }
 
@@ -100,13 +115,17 @@ export function PaymentSuccessClient() {
           if (result.data.paymentStatus === "paid") {
             await refreshUser();
             setStatus("success");
-            setMessage("Payment confirmed and your credits were added. Redirecting...");
+            setMessage(
+              "Payment confirmed and your credits were added. Redirecting..."
+            );
             trackPaymentEvent("pay_verify_success", {
               channel: verifyRequest.channel,
               paymentStatus: result.data.paymentStatus,
             });
 
-            const postPaymentRedirect = window.sessionStorage.getItem("postPaymentRedirect");
+            const postPaymentRedirect = window.sessionStorage.getItem(
+              "postPaymentRedirect"
+            );
             if (postPaymentRedirect) {
               window.sessionStorage.removeItem("postPaymentRedirect");
               successRedirectTimerRef.current = window.setTimeout(() => {
@@ -122,7 +141,9 @@ export function PaymentSuccessClient() {
 
           if (attempt === maxAttempts) {
             setStatus("pending");
-            setMessage("Payment is still processing. Please check Billing in a moment.");
+            setMessage(
+              "Payment is still processing. Please check Billing in a moment."
+            );
             return;
           }
 
@@ -140,7 +161,9 @@ export function PaymentSuccessClient() {
             paymentStatus: result.data.paymentStatus,
           });
 
-          const postPaymentRedirect = window.sessionStorage.getItem("postPaymentRedirect");
+          const postPaymentRedirect = window.sessionStorage.getItem(
+            "postPaymentRedirect"
+          );
           if (postPaymentRedirect) {
             window.sessionStorage.removeItem("postPaymentRedirect");
             successRedirectTimerRef.current = window.setTimeout(() => {
@@ -153,7 +176,9 @@ export function PaymentSuccessClient() {
         if (result.data.paymentStatus === "pending") {
           if (attempt === maxAttempts) {
             setStatus("pending");
-            setMessage("Payment is still processing. Credits should update shortly.");
+            setMessage(
+              "Payment is still processing. Credits should update shortly."
+            );
             return;
           }
           setMessage("Payment is processing. We are checking again...");
@@ -180,25 +205,66 @@ export function PaymentSuccessClient() {
     };
   }, [channelParam, refreshUser, router, verifyRequest]);
 
+  const displayId =
+    verifyRequest?.subscriptionId ||
+    verifyRequest?.orderId ||
+    verifyRequest?.sessionId ||
+    "—";
+  const channelLabel =
+    verifyRequest?.channel === "paypal" ? "PayPal" : "Stripe";
+
   return (
     <main className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center px-4 py-12 sm:px-6">
-      <section className="ui-card w-full bg-app-surface p-6 sm:p-8">
+      <section className="w-full rounded-2xl border border-app-border bg-white p-6 shadow-[0_18px_48px_-32px_rgba(15,23,42,0.4)] sm:p-8">
         {status === "verifying" ? (
           <div className="text-center">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-app-primary" />
-            <h1 className="mt-4 text-2xl font-extrabold text-app-text">Verifying payment</h1>
+            <h1 className="mt-4 text-2xl font-extrabold text-app-text">
+              Verifying payment
+            </h1>
             <p className="mt-2 text-sm text-app-text-muted">{message}</p>
             <p className="mt-1 text-xs text-app-text-muted">
-              Attempt {attemptCount} / {verifyRequest?.channel === "stripe" ? 30 : 12}
+              Attempt {attemptCount} /{" "}
+              {verifyRequest?.channel === "stripe" ? 30 : 12}
             </p>
           </div>
         ) : null}
 
         {status === "success" ? (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
-            <h1 className="mt-4 text-2xl font-extrabold text-app-text">Payment successful</h1>
-            <p className="mt-2 text-sm text-app-text-muted">{message}</p>
+          <div>
+            <div className="flex items-center justify-center gap-3 text-center">
+              <CheckCircle2 className="h-9 w-9 text-emerald-500" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-app-text-muted">
+                  Payment Confirmed
+                </p>
+                <h1 className="mt-1 text-2xl font-extrabold text-app-text">
+                  Your payment was successful
+                </h1>
+              </div>
+            </div>
+
+            <p className="mt-3 text-center text-sm text-app-text-muted">
+              {message}
+            </p>
+
+            <div className="mt-6 overflow-hidden rounded-xl border border-app-border">
+              <div className="grid grid-cols-[140px_1fr] gap-0 border-b border-app-border px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Payment ID</span>
+                <span className="truncate text-app-text-muted">
+                  {displayId}
+                </span>
+              </div>
+              <div className="grid grid-cols-[140px_1fr] gap-0 border-b border-app-border px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Channel</span>
+                <span className="text-app-text-muted">{channelLabel}</span>
+              </div>
+              <div className="grid grid-cols-[140px_1fr] gap-0 px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Status</span>
+                <span className="text-emerald-600">Success</span>
+              </div>
+            </div>
+
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/billing"
@@ -220,7 +286,9 @@ export function PaymentSuccessClient() {
         {status === "pending" ? (
           <div className="text-center">
             <Clock3 className="mx-auto h-10 w-10 text-amber-500" />
-            <h1 className="mt-4 text-2xl font-extrabold text-app-text">Payment processing</h1>
+            <h1 className="mt-4 text-2xl font-extrabold text-app-text">
+              Payment processing
+            </h1>
             <p className="mt-2 text-sm text-app-text-muted">{message}</p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
@@ -241,10 +309,40 @@ export function PaymentSuccessClient() {
         ) : null}
 
         {status === "error" ? (
-          <div className="text-center">
-            <XCircle className="mx-auto h-10 w-10 text-app-danger" />
-            <h1 className="mt-4 text-2xl font-extrabold text-app-text">Payment verification failed</h1>
-            <p className="mt-2 text-sm text-app-text-muted">{message}</p>
+          <div>
+            <div className="flex items-center justify-center gap-3 text-center">
+              <XCircle className="h-9 w-9 text-app-danger" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-app-text-muted">
+                  Payment Failed
+                </p>
+                <h1 className="mt-1 text-2xl font-extrabold text-app-text">
+                  We could not confirm your payment
+                </h1>
+              </div>
+            </div>
+
+            <p className="mt-3 text-center text-sm text-app-text-muted">
+              {message}
+            </p>
+
+            <div className="mt-6 overflow-hidden rounded-xl border border-app-border">
+              <div className="grid grid-cols-[140px_1fr] gap-0 border-b border-app-border px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Payment ID</span>
+                <span className="truncate text-app-text-muted">
+                  {displayId}
+                </span>
+              </div>
+              <div className="grid grid-cols-[140px_1fr] gap-0 border-b border-app-border px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Channel</span>
+                <span className="text-app-text-muted">{channelLabel}</span>
+              </div>
+              <div className="grid grid-cols-[140px_1fr] gap-0 px-4 py-3 text-sm">
+                <span className="font-semibold text-app-text">Status</span>
+                <span className="text-app-danger">Failed</span>
+              </div>
+            </div>
+
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/pricing"
