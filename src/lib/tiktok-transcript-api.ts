@@ -258,3 +258,15 @@ export function buildTikTokDownloadUrl(url: string, lang: string, type: "srt" | 
 
   return `/api/tiktok/transcript/download?${params.toString()}`;
 }
+
+export async function getTikTokTaskStatus(taskId: string) {
+  const token = getStoredAuthToken();
+  const response = await fetch(`/api/tiktok/transcript/task-status?task_id=${taskId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  return parseJsonResponse<{ ok: true; task_id: string; kie: TikTokDirectLinkPayload["kie"] }>(response);
+}

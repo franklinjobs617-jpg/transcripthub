@@ -263,3 +263,15 @@ export function buildInstagramDownloadUrl(
   return `/api/instagram/transcript/download?${params.toString()}`;
 }
 
+export async function getInstagramTaskStatus(taskId: string) {
+  const token = getStoredAuthToken();
+  const response = await fetch(`/api/instagram/transcript/task-status?task_id=${taskId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  return parseJsonResponse<{ ok: true; task_id: string; kie: InstagramDirectLinkPayload["kie"] }>(response);
+}
+

@@ -241,3 +241,15 @@ export function buildFacebookDownloadUrl(
   return `/api/facebook/transcript/download?${params.toString()}`;
 }
 
+export async function getFacebookTaskStatus(taskId: string) {
+  const token = getStoredAuthToken();
+  const response = await fetch(`/api/facebook/transcript/task-status?task_id=${taskId}`, {
+    method: "GET",
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  return parseJsonResponse<{ ok: true; task_id: string; kie: FacebookDirectLinkPayload["kie"] }>(response);
+}
+

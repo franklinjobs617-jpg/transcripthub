@@ -16,6 +16,7 @@ import {
 import {
   getTikTokDirectLink,
   getTikTokTranscriptInfo,
+  getTikTokTaskStatus,
   TikTokTranscriptApiError,
   type TikTokContentPayload,
   type TikTokDirectLinkPayload,
@@ -351,18 +352,15 @@ export default function TikTokTranscriptTool() {
       setDirectLink(latestPayload);
       let kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
 
-      for (
-        let round = 0;
-        !kieContent && round < KIE_POLL_MAX_ROUNDS;
-        round += 1
-      ) {
+      for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
         const kie = latestPayload.kie;
-        if (kie?.state === "fail" || kie?.submitted === false) {
+        if (kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) {
           break;
         }
         setLoadingStepIndex(3);
         await sleep(KIE_POLL_INTERVAL_MS);
-        latestPayload = await getTikTokDirectLink(cleanUrl);
+        const statusPayload = await getTikTokTaskStatus(kie.task_id);
+        latestPayload = { ...latestPayload, kie: statusPayload.kie };
         setDirectLink(latestPayload);
         kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
       }

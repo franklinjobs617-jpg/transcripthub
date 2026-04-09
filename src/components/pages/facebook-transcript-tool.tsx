@@ -14,6 +14,7 @@ import {
   FacebookTranscriptApiError,
   getFacebookDirectLink,
   getFacebookTranscriptInfo,
+  getFacebookTaskStatus,
   type FacebookContentPayload,
   type FacebookDirectLinkPayload,
   type FacebookInfoPayload,
@@ -161,9 +162,10 @@ export default function FacebookTranscriptTool() {
 
       for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
         const kie = latest.kie;
-        if (kie?.state === "fail" || kie?.submitted === false) break;
+        if (kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) break;
         await sleep(KIE_POLL_INTERVAL_MS);
-        latest = await getFacebookDirectLink(raw);
+        const statusPayload = await getFacebookTaskStatus(kie.task_id);
+        latest = { ...latest, kie: statusPayload.kie };
         setDirectLink(latest);
         kieContent = buildKieTranscriptContent(latest, infoPayload);
       }
@@ -417,11 +419,10 @@ export default function FacebookTranscriptTool() {
                         {segments.map((segment, idx) => (
                           <div
                             key={`${idx}-${segment.start}`}
-                            className={`grid items-start gap-2.5 ${
-                              showTimestampInPreview
+                            className={`grid items-start gap-2.5 ${showTimestampInPreview
                                 ? "grid-cols-[86px_minmax(0,1fr)]"
                                 : "grid-cols-1"
-                            }`}
+                              }`}
                           >
                             {showTimestampInPreview ? (
                               <span className="pt-2 text-sm font-extrabold tabular-nums text-cyan-600 dark:text-cyan-300">
