@@ -595,7 +595,6 @@ export async function handleTranscriptDirectLink(
   const guestLinkLimit = guestQuotaPolicy.guestLimit;
   const preLinkKey = buildLinkKey(platform, requestUrl);
 
-  /* 暂时关闭测试阶段的额度拦截
   if (actor.actorType === "guest") {
     const currentGuestCount = getChargedCount(actor.actorId, dayKey);
     const isPreChargedByRequestLink = hasChargedLink(
@@ -607,7 +606,6 @@ export async function handleTranscriptDirectLink(
       return buildLoginRequiredResponse(request, guestResolution);
     }
   }
-  */
 
   if (DIRECT_LINK_IP_RATE_LIMIT_ENABLED) {
     const clientIp = extractClientIp(request);
@@ -663,11 +661,9 @@ export async function handleTranscriptDirectLink(
   if (isSuccessfulDirectLink && !alreadyChargedByFinalKey) {
     if (actor.actorType === "guest") {
       const currentGuestCount = getChargedCount(actor.actorId, dayKey);
-      /* 暂时屏蔽第二次限额校验
       if (currentGuestCount >= guestLinkLimit) {
         return buildLoginRequiredResponse(request, guestResolution);
       }
-      */
 
       markLinkCharged(actor.actorId, dayKey, finalLinkKey);
     } else {

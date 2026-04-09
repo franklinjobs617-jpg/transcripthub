@@ -16,6 +16,7 @@ import {
 import {
   getInstagramDirectLink,
   getInstagramTranscriptInfo,
+  getInstagramTaskStatus,
   InstagramTranscriptApiError,
   type InstagramContentPayload,
   type InstagramDirectLinkPayload,
@@ -298,16 +299,20 @@ export default function InstagramTranscriptTool() {
       setDirectLink(latestPayload);
       let kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
 
-      for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
+      for (let round = 0; !kieContent && round < 60; round += 1) {
         const kie = latestPayload.kie;
-        if (kie?.state === "success" || kie?.state === "fail" || kie?.submitted === false) {
+        if (kie?.state === "success" || kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) {
           break;
         }
         setLoadingStepIndex(3);
-        await sleep(KIE_POLL_INTERVAL_MS);
-        latestPayload = await getInstagramDirectLink(cleanUrl);
-        setDirectLink(latestPayload);
-        kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
+        await sleep(2000);
+        const taskStatus = await getInstagramTaskStatus(kie.task_id);
+        if (taskStatus.ok) {
+          // Update only KIE part to maintain video info from original payload
+          latestPayload = { ...latestPayload, kie: taskStatus.kie as any };
+          setDirectLink(latestPayload);
+          kieContent = buildKieTranscriptContent(latestPayload, infoPayload);
+        }
       }
 
       if (!kieContent) {

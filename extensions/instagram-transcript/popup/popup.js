@@ -12,10 +12,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const copyBtn = document.getElementById('copy-btn');
   const srtBtn = document.getElementById('download-srt-btn');
+  const closeBtn = document.getElementById('close-btn');
 
   // API Configuration
   const API_BASE = 'https://transcripthub.net';
   let currentVideoUrl = '';
+
+  // Close logic
+  closeBtn.addEventListener('click', () => window.close());
 
   // 1. Initial URL Check
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -30,15 +34,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 2. Main Workflow
   async function startWorkflow() {
     try {
-      // Step A: Load Info (Thumbnail & Title)
-      loaderText.textContent = 'Fetching video info...';
+      // Step A: Load Info (Always show loading until data is FULLY ready)
+      loaderText.textContent = 'Analyzing video...';
       const infoData = await callApi('/api/instagram/transcript/info', 'POST', { url: currentVideoUrl });
 
       if (infoData.ok) {
         thumbImg.src = infoData.video?.thumbnail || '';
         titleEl.textContent = infoData.video?.title || 'Instagram Video';
-
-        // Populate languages if any
         if (infoData.subtitle?.languages?.length) {
           langSelect.innerHTML = infoData.subtitle.languages.map(l =>
             `<option value="${l.code}">${l.label} (${l.source === 'automatic' ? 'ASR' : 'Manual'})</option>`
@@ -46,33 +48,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      // Show main view while loading content
-      loadingOverlay.classList.add('hidden');
-      mainView.classList.remove('hidden');
-
-      // Step B: Get Content (Try ASR first, then AI)
+      // Step B: Get Content (Check ASR subtitles first)
       if (infoData.subtitle?.available) {
-        loaderText.textContent = 'Downloading transcript...';
+        loaderText.textContent = 'Extracting subtitles...';
         const contentData = await callApi('/api/instagram/transcript/content', 'POST', {
           url: currentVideoUrl,
           lang: langSelect.value
         });
         if (contentData.ok) {
           renderSegments(contentData.content?.segments);
+          showContent();
           return;
         }
       }
 
-      // Step C: If no ASR, use AI
-      renderSegments([{ start: 0, text: "Transcribing with AI... please wait." }]);
+      // Step C: If no ASR, execute AI
+      loaderText.textContent = 'AI Transcribing (may take ~15s)...';
       const directData = await callApi('/api/instagram/transcript/direct-link', 'POST', { url: currentVideoUrl });
 
       let finalKie = directData.kie;
-      if (finalKie?.state !== 'success') {
-        finalKie = await pollTaskStatus(currentVideoUrl);
+      if (finalKie?.state !== 'success' && finalKie?.task_id) {
+        finalKie = await pollTaskStatus(finalKie.task_id);
       }
 
       renderSegments(finalKie.segments || [{ start: 0, text: finalKie.transcript_text }]);
+      showContent();
 
     } catch (err) {
       console.error(err);
@@ -81,8 +81,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.close();
         return;
       }
+      loadingOverlay.classList.add('hidden');
+      mainView.classList.remove('hidden');
       resultContent.innerHTML = `<p style="color:red; padding:20px;">Error: ${err.message}</p>`;
     }
+  }
+
+  function showContent() {
+    loadingOverlay.classList.add('hidden');
+    mainView.classList.remove('hidden');
   }
 
   // Helper: API Caller
@@ -101,10 +108,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Helper: Polling
-  async function pollTaskStatus(videoUrl) {
-    for (let i = 0; i < 40; i++) {
+  async function pollTaskStatus(taskId) {
+    for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 1500));
-      const data = await callApi('/api/instagram/transcript/direct-link', 'POST', { url: videoUrl }).catch(() => null);
+      loaderText.textContent = `Processing AI... (${i + 1}s)`;
+      const data = await callApi(`/api/instagram/transcript/task-status?task_id=${taskId}`).catch(() => null);
       if (data?.kie?.state === 'success') return data.kie;
       if (data?.kie?.state === 'fail') throw new Error(data.kie.error?.message || "Failed");
     }
@@ -113,7 +121,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Helper: Rendering
   function renderSegments(segments) {
-    if (!segments || !segments.length) return;
+    if (!segments || !segments.length) {
+      resultContent.innerHTML = '<p style="padding:20px;">No transcript available.</p>';
+      return;
+    }
 
     resultContent.innerHTML = segments.map(seg => `
         <div class="segment-row">
@@ -156,7 +167,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     const p = t.split(':');
     return parseInt(p[0]) * 60 + parseInt(p[1]);
   }
-
-  // Bind Close Button
-  document.getElementById('close-btn').addEventListener('click', () => window.close());
 });
