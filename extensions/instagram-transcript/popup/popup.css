@@ -1,0 +1,276 @@
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: #ffffff;
+  min-width: 340px;
+  max-width: 340px;
+  color: #1a1a1a;
+}
+
+.popup-container {
+  padding: 20px;
+}
+
+/* Header */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.logo-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.logo-subtitle {
+  font-size: 11px;
+  color: #666;
+}
+
+/* Current Page Section */
+.current-page {
+  margin-bottom: 16px;
+}
+
+.video-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #E1306C 0%, #F77737 100%);
+}
+
+.video-placeholder svg {
+  width: 48px;
+  height: 48px;
+  fill: rgba(255, 255, 255, 0.5);
+}
+
+.video-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.generate-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  color: #E1306C;
+  border: none;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.generate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.generate-btn:active {
+  transform: translateY(0);
+}
+
+.generate-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.generate-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.generate-btn.loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.video-url {
+  font-size: 11px;
+  color: #999;
+  margin-top: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No Video Section */
+.no-video {
+  text-align: center;
+  padding: 32px 16px;
+  background: #f8f8f8;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.no-video-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  background: #e8e8e8;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-video-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: #999;
+}
+
+.no-video-text {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Result Section */
+.result-section {
+  background: #f8f8f8;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+  max-height: 200px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  background: #f5f5f5;
+  color: #1a1a1a;
+}
+
+.copy-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.result-content {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #333;
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Footer */
+.popup-footer {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 14px;
+}
+
+.visit-site-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.visit-site-btn:hover {
+  background: #333;
+}
+
+.visit-site-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Success state */
+.generate-btn.success {
+  background: #22c55e;
+  color: white;
+}

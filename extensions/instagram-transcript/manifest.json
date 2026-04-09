@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Instagram Transcript Generator",
+  "version": "1.0.0",
+  "description": "Generate transcripts for Instagram Reels and videos with one click. Free 2 times daily.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.instagram.com/*",
+    "https://transcripthub.net/*",
+    "https://www.transcripthub.net/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.instagram.com/*", "https://instagram.com/*"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background/background.js"
+  }
+}

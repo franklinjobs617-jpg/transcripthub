@@ -83,11 +83,11 @@ function buildKieTranscriptContent(
   if (!kie?.submitted || kie.state !== "success") return null;
   const parsedKie = parseKieTranscriptResult(kie.result, kie.transcript_text);
   const transcriptText = parsedKie.transcriptText;
-  if (!transcriptText) return null;
+  // 如果任务成功但文字为空，也返回有效 content
   const segments: TranscriptSegment[] =
     parsedKie.segments.length > 0
       ? parsedKie.segments
-      : [{ start: 0, end: 0, text: transcriptText }];
+      : [{ start: 0, end: 0, text: transcriptText || "" }];
   return {
     ok: true,
     platform: "facebook",
@@ -162,7 +162,7 @@ export default function FacebookTranscriptTool() {
 
       for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
         const kie = latest.kie;
-        if (kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) break;
+        if (kie?.state === "success" || kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) break;
         await sleep(KIE_POLL_INTERVAL_MS);
         const statusPayload = await getFacebookTaskStatus(kie.task_id);
         latest = { ...latest, kie: statusPayload.kie };
@@ -420,8 +420,8 @@ export default function FacebookTranscriptTool() {
                           <div
                             key={`${idx}-${segment.start}`}
                             className={`grid items-start gap-2.5 ${showTimestampInPreview
-                                ? "grid-cols-[86px_minmax(0,1fr)]"
-                                : "grid-cols-1"
+                              ? "grid-cols-[86px_minmax(0,1fr)]"
+                              : "grid-cols-1"
                               }`}
                           >
                             {showTimestampInPreview ? (

@@ -35,7 +35,7 @@ const LOADING_STEPS = [
   "Extracting audio",
   "Generating transcript",
 ] as const;
-const KIE_POLL_MAX_ROUNDS = 12;
+const KIE_POLL_MAX_ROUNDS = 30;
 const KIE_POLL_INTERVAL_MS = 3000;
 
 type TranscriptSegment = {
@@ -185,14 +185,9 @@ function buildKieTranscriptContent(
 
   const parsedKie = parseKieTranscriptResult(kie.result, kie.transcript_text);
   const transcriptText = parsedKie.transcriptText;
-  if (!transcriptText) {
-    return null;
-  }
-
+  // 如果任务成功但确实没文字，我们也应该返回一个有效的 content 结构，而不是 null
   const segments: TranscriptSegment[] =
-    parsedKie.segments.length > 0
-      ? parsedKie.segments
-      : [{ start: 0, end: 0, text: transcriptText }];
+    parsedKie.segments.length > 0 ? parsedKie.segments : [{ start: 0, end: 0, text: transcriptText || "" }];
   return {
     ok: true,
     platform: "instagram",
@@ -209,13 +204,14 @@ function buildKieTranscriptContent(
       thumbnail: directPayload.video.thumbnail || infoPayload.video.thumbnail,
       duration: directPayload.video.duration || infoPayload.video.duration,
       uploader: directPayload.video.uploader || infoPayload.video.uploader,
-      webpage_url: directPayload.video.webpage_url || infoPayload.video.webpage_url,
+      webpage_url:
+        directPayload.video.webpage_url || infoPayload.video.webpage_url,
     },
     content: {
       segments,
-      full_text: transcriptText,
+      full_text: transcriptText || "",
       line_count: segments.length,
-      char_count: transcriptText.length,
+      char_count: (transcriptText || "").length,
     },
   };
 }
@@ -304,7 +300,7 @@ export default function InstagramTranscriptTool() {
 
       for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
         const kie = latestPayload.kie;
-        if (kie?.state === "fail" || kie?.submitted === false) {
+        if (kie?.state === "success" || kie?.state === "fail" || kie?.submitted === false) {
           break;
         }
         setLoadingStepIndex(3);
@@ -451,8 +447,8 @@ export default function InstagramTranscriptTool() {
   }
 
   function triggerDownload(fileName: string, contentText: string, mimeType: string) {
-    const blob = new Blob([contentText], { type: mimeType });
-    const blobUrl = URL.createObjectURL(blob);
+    const fileBlob = new Blob([contentText], { type: mimeType });
+    const blobUrl = URL.createObjectURL(fileBlob);
     const anchor = document.createElement("a");
     anchor.href = blobUrl;
     anchor.download = fileName;

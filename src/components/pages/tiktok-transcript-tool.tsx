@@ -194,14 +194,11 @@ function buildKieTranscriptContent(
 
   const parsedKie = parseKieTranscriptResult(kie.result, kie.transcript_text);
   const transcriptText = parsedKie.transcriptText;
-  if (!transcriptText) {
-    return null;
-  }
-
+  // 支持空文本结果
   const segments: TranscriptSegment[] =
     parsedKie.segments.length > 0
       ? parsedKie.segments
-      : [{ start: 0, end: 0, text: transcriptText }];
+      : [{ start: 0, end: 0, text: transcriptText || "" }];
   return {
     ok: true,
     platform: "tiktok",
@@ -354,7 +351,7 @@ export default function TikTokTranscriptTool() {
 
       for (let round = 0; !kieContent && round < KIE_POLL_MAX_ROUNDS; round += 1) {
         const kie = latestPayload.kie;
-        if (kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) {
+        if (kie?.state === "success" || kie?.state === "fail" || kie?.submitted === false || !kie?.task_id) {
           break;
         }
         setLoadingStepIndex(3);
