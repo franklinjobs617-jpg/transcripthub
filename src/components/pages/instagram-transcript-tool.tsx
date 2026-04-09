@@ -35,7 +35,7 @@ const LOADING_STEPS = [
   "Extracting audio",
   "Generating transcript",
 ] as const;
-const KIE_POLL_MAX_ROUNDS = 30;
+const KIE_POLL_MAX_ROUNDS = 12;
 const KIE_POLL_INTERVAL_MS = 3000;
 
 type TranscriptSegment = {

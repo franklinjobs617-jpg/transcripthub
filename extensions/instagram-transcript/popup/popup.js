@@ -1,139 +1,162 @@
-// Popup Script - 全流程异步化版本
-const API_BASE = 'https://transcripthub.net';
-
 document.addEventListener('DOMContentLoaded', async () => {
-  const currentPageSection = document.getElementById('current-page-section');
-  const noVideoSection = document.getElementById('no-video-section');
-  const resultSection = document.getElementById('result-section');
-  const generateBtn = document.getElementById('generate-btn');
-  const btnText = document.getElementById('btn-text');
-  const copyBtn = document.getElementById('copy-btn');
-  const copyText = document.getElementById('copy-text');
-  const visitSiteBtn = document.getElementById('visit-site-btn');
-  const videoUrlEl = document.getElementById('video-url');
+  // UI Elements
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const loaderText = document.getElementById('loader-text');
+  const mainView = document.getElementById('main-view');
+  const noVideoView = document.getElementById('no-video-view');
+
+  const thumbImg = document.getElementById('video-thumbnail');
+  const titleEl = document.getElementById('video-title');
+  const langSelect = document.getElementById('lang-select');
   const resultContent = document.getElementById('result-content');
 
-  let currentVideoUrl = null;
-  let lastTranscriptText = "";
+  const copyBtn = document.getElementById('copy-btn');
+  const srtBtn = document.getElementById('download-srt-btn');
 
-  // 检查当前tab
-  async function checkCurrentTab() {
+  // API Configuration
+  const API_BASE = 'https://transcripthub.net';
+  let currentVideoUrl = '';
+
+  // 1. Initial URL Check
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.url && (tab.url.includes('instagram.com/reels/') || tab.url.includes('instagram.com/p/'))) {
+    currentVideoUrl = tab.url.split('?')[0];
+    startWorkflow();
+  } else {
+    loadingOverlay.classList.add('hidden');
+    noVideoView.classList.remove('hidden');
+  }
+
+  // 2. Main Workflow
+  async function startWorkflow() {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab && tab.url && (tab.url.includes('instagram.com/reel/') ||
-        tab.url.includes('instagram.com/reels/') ||
-        tab.url.includes('instagram.com/v/') ||
-        tab.url.includes('instagram.com/tv/'))) {
-        currentVideoUrl = tab.url.split('?')[0];
-        currentPageSection.style.display = 'block';
-        noVideoSection.style.display = 'none';
-        videoUrlEl.textContent = currentVideoUrl;
-      } else {
-        currentPageSection.style.display = 'none';
-        noVideoSection.style.display = 'block';
+      // Step A: Load Info (Thumbnail & Title)
+      loaderText.textContent = 'Fetching video info...';
+      const infoData = await callApi('/api/instagram/transcript/info', 'POST', { url: currentVideoUrl });
+
+      if (infoData.ok) {
+        thumbImg.src = infoData.video?.thumbnail || '';
+        titleEl.textContent = infoData.video?.title || 'Instagram Video';
+
+        // Populate languages if any
+        if (infoData.subtitle?.languages?.length) {
+          langSelect.innerHTML = infoData.subtitle.languages.map(l =>
+            `<option value="${l.code}">${l.label} (${l.source === 'automatic' ? 'ASR' : 'Manual'})</option>`
+          ).join('');
+        }
       }
-    } catch (error) {
-      currentPageSection.style.display = 'none';
-      noVideoSection.style.display = 'block';
+
+      // Show main view while loading content
+      loadingOverlay.classList.add('hidden');
+      mainView.classList.remove('hidden');
+
+      // Step B: Get Content (Try ASR first, then AI)
+      if (infoData.subtitle?.available) {
+        loaderText.textContent = 'Downloading transcript...';
+        const contentData = await callApi('/api/instagram/transcript/content', 'POST', {
+          url: currentVideoUrl,
+          lang: langSelect.value
+        });
+        if (contentData.ok) {
+          renderSegments(contentData.content?.segments);
+          return;
+        }
+      }
+
+      // Step C: If no ASR, use AI
+      renderSegments([{ start: 0, text: "Transcribing with AI... please wait." }]);
+      const directData = await callApi('/api/instagram/transcript/direct-link', 'POST', { url: currentVideoUrl });
+
+      let finalKie = directData.kie;
+      if (finalKie?.state !== 'success') {
+        finalKie = await pollTaskStatus(currentVideoUrl);
+      }
+
+      renderSegments(finalKie.segments || [{ start: 0, text: finalKie.transcript_text }]);
+
+    } catch (err) {
+      console.error(err);
+      if (err.message.includes('Free guest limit') || err.message.includes('LOGIN_REQUIRED')) {
+        chrome.tabs.create({ url: 'https://transcripthub.net/login' });
+        window.close();
+        return;
+      }
+      resultContent.innerHTML = `<p style="color:red; padding:20px;">Error: ${err.message}</p>`;
     }
   }
 
-  // 通用Fetch封装
-  async function callApi(endpoint, method = 'POST', body = null) {
+  // Helper: API Caller
+  async function callApi(path, method = 'GET', body = null) {
     const options = {
       method,
       headers: { 'Content-Type': 'application/json' }
     };
     if (body) options.body = JSON.stringify(body);
-
-    const response = await fetch(`${API_BASE}${endpoint}`, options);
-    const data = await response.json();
+    const response = await fetch(`${API_BASE}${path}`, options);
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.error?.message || `API Error: ${response.status}`);
+      throw new Error(data.error?.message || data.error?.code || `API Error: ${response.status}`);
     }
     return data;
   }
 
-  // 轮询逻辑 - 改为调用 direct-link
-  async function pollTaskStatus(videoUrl, maxAttempts = 30) {
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+  // Helper: Polling
+  async function pollTaskStatus(videoUrl) {
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 1500));
       const data = await callApi('/api/instagram/transcript/direct-link', 'POST', { url: videoUrl }).catch(() => null);
-
-      if (!data || !data.kie) continue;
-
-      if (data.kie.state === 'success') {
-        return data.kie;
-      }
-      if (data.kie.state === 'fail') {
-        throw new Error(data.kie.error?.message || "Transcription failed.");
-      }
+      if (data?.kie?.state === 'success') return data.kie;
+      if (data?.kie?.state === 'fail') throw new Error(data.kie.error?.message || "Failed");
     }
-    throw new Error('Transcription timeout.');
+    throw new Error('Timeout');
   }
 
-  // 生成转录
-  async function generateTranscript() {
-    if (!currentVideoUrl) return;
+  // Helper: Rendering
+  function renderSegments(segments) {
+    if (!segments || !segments.length) return;
 
-    generateBtn.disabled = true;
-    generateBtn.classList.add('loading');
-    btnText.textContent = 'Analyzing...';
-    resultSection.style.display = 'none';
-
-    try {
-      // 1. 发起请求获取任务
-      const directData = await callApi('/api/instagram/transcript/direct-link', 'POST', { url: currentVideoUrl });
-
-      let finalKie = directData.kie;
-
-      // 2. 如果没拿结果，则轮询
-      if (finalKie?.state !== 'success') {
-        btnText.textContent = 'Transcribing...';
-        finalKie = await pollTaskStatus(currentVideoUrl);
-      }
-
-      lastTranscriptText = finalKie?.transcript_text || "";
-
-      // 显示结果 (即使为空也显示成功状态，避免报错)
-      resultContent.textContent = lastTranscriptText || "(No speech detected in this video)";
-      resultSection.style.display = 'flex';
-
-      generateBtn.classList.remove('loading');
-      generateBtn.classList.add('success');
-      btnText.textContent = 'Finished!';
-
-      await chrome.runtime.sendMessage({ action: 'incrementUsage' });
-
-      setTimeout(() => {
-        generateBtn.disabled = false;
-        generateBtn.classList.remove('success');
-        btnText.textContent = 'Generate Transcript';
-      }, 3000);
-
-    } catch (error) {
-      console.error('Popup error:', error);
-      btnText.textContent = 'Opening website...';
-
-      // 遇到严重错误（配额、登录、超时）自动引流到网站
-      setTimeout(async () => {
-        await chrome.runtime.sendMessage({ action: 'openWebsite', url: currentVideoUrl });
-        window.close();
-      }, 1500);
-    }
+    resultContent.innerHTML = segments.map(seg => `
+        <div class="segment-row">
+            <span class="timestamp">${formatTime(seg.start)}</span>
+            <span class="segment-text">${seg.text}</span>
+        </div>
+    `).join('');
   }
 
+  function formatTime(sec) {
+    const s = Math.floor(sec || 0);
+    const m = Math.floor(s / 60);
+    const ss = (s % 60).toString().padStart(2, '0');
+    return `${m}:${ss}`;
+  }
+
+  // Actions
   copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(lastTranscriptText);
-    copyText.textContent = 'Copied!';
-    setTimeout(() => { copyText.textContent = 'Copy'; }, 2000);
+    const text = Array.from(document.querySelectorAll('.segment-text')).map(s => s.textContent).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      copyBtn.innerText = 'Copied!';
+      setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
+    });
   });
 
-  visitSiteBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'openWebsite', url: currentVideoUrl || '' });
-    window.close();
+  srtBtn.addEventListener('click', () => {
+    const rows = document.querySelectorAll('.segment-row');
+    let srt = '';
+    rows.forEach((row, i) => {
+      const t = row.querySelector('.timestamp').textContent;
+      const txt = row.querySelector('.segment-text').textContent;
+      srt += `${i + 1}\n00:${t.padStart(5, '0')},000 --> 00:${formatTime(parseTime(t) + 3).padStart(5, '0')},000\n${txt}\n\n`;
+    });
+    const blob = new Blob([srt], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'transcript.srt'; a.click();
   });
 
-  generateBtn.addEventListener('click', generateTranscript);
-  await checkCurrentTab();
+  function parseTime(t) {
+    const p = t.split(':');
+    return parseInt(p[0]) * 60 + parseInt(p[1]);
+  }
+
+  // Bind Close Button
+  document.getElementById('close-btn').addEventListener('click', () => window.close());
 });

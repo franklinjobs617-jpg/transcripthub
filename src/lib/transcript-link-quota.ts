@@ -2,7 +2,7 @@ import type { NextResponse } from "next/server";
 import type { RemoteAuthUser } from "@/lib/auth-backend";
 
 const GUEST_COOKIE_NAME = "th_guest_id";
-const DEFAULT_GUEST_DAILY_LIMIT = 2;
+const DEFAULT_GUEST_DAILY_LIMIT = 99999;
 const QUOTA_TIMEZONE = process.env.QUOTA_TIMEZONE || "Asia/Shanghai";
 const DEFAULT_GUEST_QUOTA_STRATEGY = "legacy_daily";
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
