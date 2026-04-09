@@ -26,7 +26,7 @@ import { FacebookIcon } from "@/components/shared/social-icons";
 
 const EXAMPLE_FACEBOOK_URL = "https://www.facebook.com/watch/?v=1256476318892918";
 const KIE_POLL_MAX_ROUNDS = 12;
-const KIE_POLL_INTERVAL_MS = 3000;
+const KIE_POLL_INTERVAL_MS = 1200;
 
 type TranscriptSegment = { start: number; end: number; text: string };
 

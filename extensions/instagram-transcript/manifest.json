@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Instagram Transcript Generator",
   "version": "1.0.0",
-  "description": "Generate transcripts for Instagram Reels and videos with one click. Free 2 times daily.",
+  "description": "Generate transcripts for Instagram Reels and videos with one click. Completely Free.",
   "permissions": [
     "activeTab",
     "storage"
@@ -27,9 +27,18 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.instagram.com/*", "https://instagram.com/*"],
-      "js": ["content/content.js"],
-      "css": ["content/content.css"]
+      "matches": [
+        "https://*.instagram.com/*",
+        "https://instagram.com/*",
+        "https://*.facebook.com/*",
+        "https://facebook.com/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ]
     }
   ],
   "background": {

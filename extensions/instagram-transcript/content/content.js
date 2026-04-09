@@ -5,7 +5,6 @@
   let fabButton = null;
   let toastElement = null;
 
-  // API基础URL - 如果是本地调试，可以改为 http://localhost:3000
   const API_BASE = 'https://transcripthub.net';
 
   const KIE_POLL_MAX_ROUNDS = 30;

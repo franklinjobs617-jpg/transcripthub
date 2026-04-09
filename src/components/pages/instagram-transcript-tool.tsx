@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
@@ -48,10 +48,10 @@ type TranscriptSegment = {
 function validateInstagramUrl(url: string): string | null {
   const trimmed = url.trim();
   if (!trimmed) {
-    return "Please paste an Instagram video URL.";
+    return "Please paste a video URL.";
   }
-  if (!trimmed.includes("instagram.com")) {
-    return "Only Instagram links are supported in this tool.";
+  if (!trimmed.includes("instagram.com") && !trimmed.includes("facebook.com")) {
+    return "Only Instagram and Facebook links are supported in this tool.";
   }
   return null;
 }
@@ -180,7 +180,7 @@ function buildKieTranscriptContent(
   infoPayload: InstagramInfoPayload
 ): InstagramContentPayload | null {
   const kie = directPayload.kie;
-  if (!kie || kie.state !== "success") {
+  if (!kie || !kie.submitted || kie.state !== "success") {
     return null;
   }
 
@@ -305,7 +305,7 @@ export default function InstagramTranscriptTool() {
           break;
         }
         setLoadingStepIndex(3);
-        await sleep(1200);
+        await sleep(2000);
         const taskStatus = await getInstagramTaskStatus(kie.task_id);
         if (taskStatus.ok) {
           // Update only KIE part to maintain video info from original payload
