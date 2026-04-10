@@ -8,6 +8,7 @@ import {
   Home,
   Loader2,
   RefreshCw,
+  Sparkles,
   XCircle,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -27,11 +28,13 @@ function wait(ms: number) {
 export function PaymentSuccessClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
   const [status, setStatus] = useState<VerifyStatus>("verifying");
   const [message, setMessage] = useState("Verifying your payment status...");
   const [attemptCount, setAttemptCount] = useState(0);
+  const [redirectSeconds, setRedirectSeconds] = useState<number | null>(null);
   const successRedirectTimerRef = useRef<number | null>(null);
+  const successCountdownTimerRef = useRef<number | null>(null);
   const channelParam = searchParams.get("channel");
 
   const verifyRequest = useMemo<PaymentVerifyRequest | null>(() => {
@@ -126,15 +129,24 @@ export function PaymentSuccessClient() {
             const postPaymentRedirect = window.sessionStorage.getItem(
               "postPaymentRedirect"
             );
+            const delayMs = 4000;
+            setRedirectSeconds(Math.floor(delayMs / 1000));
+            successCountdownTimerRef.current = window.setInterval(() => {
+              setRedirectSeconds((current) => {
+                if (typeof current !== "number") return null;
+                if (current <= 1) return 0;
+                return current - 1;
+              });
+            }, 1000);
             if (postPaymentRedirect) {
               window.sessionStorage.removeItem("postPaymentRedirect");
               successRedirectTimerRef.current = window.setTimeout(() => {
                 router.replace(postPaymentRedirect);
-              }, 1800);
+              }, delayMs);
             } else {
               successRedirectTimerRef.current = window.setTimeout(() => {
                 router.replace("/");
-              }, 2000);
+              }, delayMs);
             }
             return;
           }
@@ -165,10 +177,19 @@ export function PaymentSuccessClient() {
             "postPaymentRedirect"
           );
           if (postPaymentRedirect) {
+            const delayMs = 4000;
+            setRedirectSeconds(Math.floor(delayMs / 1000));
+            successCountdownTimerRef.current = window.setInterval(() => {
+              setRedirectSeconds((current) => {
+                if (typeof current !== "number") return null;
+                if (current <= 1) return 0;
+                return current - 1;
+              });
+            }, 1000);
             window.sessionStorage.removeItem("postPaymentRedirect");
             successRedirectTimerRef.current = window.setTimeout(() => {
               router.replace(postPaymentRedirect);
-            }, 1800);
+            }, delayMs);
           }
           return;
         }
@@ -202,6 +223,9 @@ export function PaymentSuccessClient() {
       if (successRedirectTimerRef.current !== null) {
         window.clearTimeout(successRedirectTimerRef.current);
       }
+      if (successCountdownTimerRef.current !== null) {
+        window.clearInterval(successCountdownTimerRef.current);
+      }
     };
   }, [channelParam, refreshUser, router, verifyRequest]);
 
@@ -232,21 +256,19 @@ export function PaymentSuccessClient() {
 
         {status === "success" ? (
           <div>
-            <div className="flex items-center justify-center gap-3 text-center">
-              <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-app-text-muted">
-                  Payment Confirmed
-                </p>
-                <h1 className="mt-1 text-2xl font-extrabold text-app-text">
-                  Your payment was successful
-                </h1>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-6 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm ring-2 ring-emerald-200">
+                <CheckCircle2 className="h-10 w-10 text-emerald-500" />
               </div>
+              <p className="mt-4 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Payment Confirmed
+              </p>
+              <h1 className="mt-3 text-3xl font-extrabold text-app-text">
+                Payment successful 🎉
+              </h1>
+              <p className="mt-2 text-sm text-app-text-muted">{message}</p>
             </div>
-
-            <p className="mt-3 text-center text-sm text-app-text-muted">
-              {message}
-            </p>
 
             <div className="mt-6 overflow-hidden rounded-xl border border-app-border">
               <div className="grid grid-cols-[140px_1fr] gap-0 border-b border-app-border px-4 py-3 text-sm">
@@ -264,6 +286,16 @@ export function PaymentSuccessClient() {
                 <span className="text-emerald-600">Success</span>
               </div>
             </div>
+            {typeof user?.credits === "number" ? (
+              <p className="mt-3 text-center text-sm font-semibold text-emerald-700">
+                Current credits: {user.credits}
+              </p>
+            ) : null}
+            {typeof redirectSeconds === "number" && redirectSeconds > 0 ? (
+              <p className="mt-2 text-center text-xs text-app-text-muted">
+                Redirecting automatically in {redirectSeconds}s...
+              </p>
+            ) : null}
 
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
