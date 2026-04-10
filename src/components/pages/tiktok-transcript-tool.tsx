@@ -36,7 +36,7 @@ const LOADING_STEPS = [
   "Extracting audio",
   "Generating transcript",
 ] as const;
-const KIE_POLL_MAX_ROUNDS = 2;
+const KIE_POLL_MAX_ROUNDS = 20;
 const KIE_POLL_INTERVAL_MS = 1000;
 
 type TranscriptSegment = {
@@ -607,9 +607,7 @@ export default function TikTokTranscriptTool() {
   }, []);
 
   const thumbnailUrl = info?.video.thumbnail || content?.video?.thumbnail || "";
-  const thumbnailProxyUrl = thumbnailUrl
-    ? `/api/tiktok/transcript/thumbnail?url=${encodeURIComponent(thumbnailUrl)}`
-    : "";
+  const thumbnailDisplayUrl = thumbnailUrl;
   const directLinkRecommendedUrl =
     directLink?.direct_link?.recommended_url || "";
   const directMediaUrl =
@@ -785,9 +783,9 @@ export default function TikTokTranscriptTool() {
             <div className="grid gap-5 p-5 lg:grid-cols-[260px_minmax(0,1fr)]">
               <aside className="space-y-3">
                 <div className="overflow-hidden rounded-xl border border-app-border bg-app-bg shadow-sm">
-                  {thumbnailProxyUrl && !thumbnailLoadFailed ? (
+                  {thumbnailDisplayUrl && !thumbnailLoadFailed ? (
                     <Image
-                      src={thumbnailProxyUrl}
+                      src={thumbnailDisplayUrl}
                       alt={info.video.title || "TikTok thumbnail"}
                       width={540}
                       height={960}

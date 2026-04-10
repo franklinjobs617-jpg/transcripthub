@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TranscriptHub</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div class="popup-wrapper">
+    <!-- Purple Header Bar -->
+    <header class="popup-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="cursor: pointer;">
+        <circle cx="12" cy="5" r="2" />
+        <circle cx="12" cy="12" r="2" />
+        <circle cx="12" cy="19" r="2" />
+      </svg>
+      <span style="font-weight: 600; font-size: 14px;">TranscriptHub</span>
+      <svg id="close-btn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        style="cursor: pointer;">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </header>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-screen">
+      <div class="spinner"></div>
+      <p style="font-size: 13px; color: #666;" id="loader-text">Loading video info...</p>
+    </div>
+
+    <!-- Active View (Only shows when data is ready) -->
+    <div id="main-view" class="hidden">
+      <!-- Media Meta Info -->
+      <section class="meta-container">
+        <img id="video-thumbnail" src="" alt="Thumbnail" />
+        <div class="meta-info">
+          <p class="video-title" id="video-title">Title loading...</p>
+          <select class="lang-selector" id="lang-select">
+            <option value="en">English (ASR)</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Transcription Card -->
+      <section class="content-area custom-scrollbar" id="result-content-container">
+        <div id="result-content"></div>
+      </section>
+
+      <!-- Bottom Buttons -->
+      <footer class="action-footer">
+        <button class="btn-base btn-primary" id="copy-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+        <button class="btn-base btn-outline" id="download-srt-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          SRT
+        </button>
+      </footer>
+    </div>
+
+    <!-- No Video State (Optional fallback) -->
+    <div id="no-video-view" class="hidden" style="padding: 40px; text-align: center;">
+      <p style="color: #666;">Please open an Instagram Reel.</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>
